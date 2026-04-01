@@ -1,0 +1,324 @@
+:root {
+    --deep-blue:    #2c5f77;
+    --ice-blue:     #a8d8ea;
+    --snow-white:   #f4f9fc;
+    --shadow:       #1a3a4a;
+    --accent:       #ff6b35;
+    --wood-brown:   #8b5a3c;
+}
+
+* {
+    margin: 0; padding: 0; box-sizing: border-box;
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+    width: 100%; height: 100%;
+    overscroll-behavior: none;
+    overflow: hidden;
+}
+
+body {
+    font-family: 'Cabin', sans-serif;
+    background: #1a3a4a;
+}
+
+/* ══════════ ÉCRAN DE CHARGEMENT ══════════ */
+#loadingScreen {
+    position: fixed; inset: 0; z-index: 999;
+    background: linear-gradient(135deg, #1a3a4a, #2c5f77);
+    display: flex; justify-content: center; align-items: center;
+    transition: opacity 0.5s ease;
+}
+.loading-content { text-align: center; color: #fff; padding: 20px; }
+.loading-title {
+    font-family: 'Permanent Marker', cursive;
+    font-size: clamp(1.8em, 6vw, 3em);
+    text-shadow: 3px 3px 0 #1a3a4a;
+    margin-bottom: 12px;
+}
+.loading-sub   { color: var(--ice-blue); margin-bottom: 16px; font-size: 0.9em; }
+.loading-bar-bg {
+    width: min(260px, 70vw); height: 8px;
+    background: rgba(255,255,255,0.15); border-radius: 4px;
+    margin: 0 auto 12px; overflow: hidden;
+}
+.loading-bar-fill {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, var(--ice-blue), var(--accent));
+    border-radius: 4px; transition: width 0.3s ease;
+}
+.loading-hint { font-size: 0.8em; color: rgba(255,255,255,0.5); }
+
+/* ══════════ CONTENEUR PRINCIPAL ══════════ */
+.game-container {
+    width: 100vw; height: 100vh;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    background: rgba(244,249,252,0.95);
+    animation: slideIn 0.4s ease-out;
+}
+@keyframes slideIn {
+    from { opacity: 0; } to { opacity: 1; }
+}
+
+/* ══════════ HEADER ══════════ */
+.header {
+    flex-shrink: 0;
+    background: linear-gradient(135deg, var(--deep-blue), #3a7a9a);
+    padding: 4px 10px 3px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+/* Ligne commune header */
+.header-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* Ligne 1 : titre + chips méta */
+.header-row-top {
+    justify-content: space-between;
+    margin-bottom: 3px;
+    flex-wrap: nowrap;
+}
+
+h1 {
+    font-family: 'Permanent Marker', cursive;
+    color: var(--snow-white);
+    font-size: clamp(0.9em, 3.5vw, 1.4em);
+    text-shadow: 2px 2px 0 var(--shadow);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.header-metas {
+    display: flex; gap: 4px; align-items: center;
+    overflow-x: auto; scrollbar-width: none;
+    flex-wrap: nowrap;
+}
+.header-metas::-webkit-scrollbar { display: none; }
+
+.meta-chip {
+    background: rgba(255,255,255,0.18);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 6px;
+    padding: 2px 7px;
+    display: flex; align-items: center; gap: 3px;
+    white-space: nowrap; flex-shrink: 0;
+    color: #fff;
+    font-size: clamp(0.65em, 2vw, 0.82em);
+    font-weight: bold;
+}
+.season-chip { font-size: clamp(0.7em, 2.2vw, 0.88em); }
+.meta-icon   { font-size: 0.9em; }
+
+#position { color: var(--accent); font-weight: bold; }
+
+/* Ligne 2 : ressources scrollables */
+.header-resources {
+    overflow-x: auto; scrollbar-width: none;
+    flex-wrap: nowrap; padding-bottom: 1px;
+}
+.header-resources::-webkit-scrollbar { display: none; }
+
+.res-chip {
+    background: rgba(0,0,0,0.25);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 5px;
+    padding: 1px 6px;
+    display: flex; align-items: center; gap: 2px;
+    color: #fff;
+    font-size: clamp(0.65em, 2vw, 0.8em);
+    font-weight: bold;
+    white-space: nowrap; flex-shrink: 0;
+}
+.res-icon { font-size: 0.85em; }
+
+/* ══════════ CANVAS WRAPPER ══════════ */
+/* Le wrapper prend tout l'espace restant entre header et footer.
+   Le canvas s'y étire à 100%. Ça garantit canvas.offsetWidth correct. */
+.canvas-wrapper {
+    flex: 1;
+    min-height: 0;
+    position: relative;   /* nécessaire pour les jauges en overlay */
+    overflow: hidden;
+}
+
+#gameCanvas {
+    width: 100%;           /* Fix Chrome : force le calcul de la largeur */
+    height: 100%;          /* Fix Chrome : force le calcul de la hauteur */
+    display: block;
+    background: linear-gradient(180deg, #e8f4f8 0%, #d4e9f0 100%);
+    cursor: crosshair;
+    touch-action: none;
+}
+
+/* ══════════ JAUGES FAIM/FROID EN OVERLAY ══════════
+   Position absolute dans .canvas-wrapper → elles flottent
+   sur le canvas sans prendre de place dans le layout. */
+.stat-overlay {
+    position: absolute;
+    top: 8px; left: 8px;
+    display: flex; flex-direction: column; gap: 4px;
+    pointer-events: none;   /* les clics passent à travers vers le canvas */
+    z-index: 10;
+}
+
+.bar-item {
+    display: flex; align-items: center; gap: 4px;
+    background: rgba(255,255,255,0.88);
+    border-radius: 6px;
+    padding: 3px 6px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+    min-width: 120px;
+    max-width: 160px;
+}
+
+.bar-icon { font-size: 0.75em; flex-shrink: 0; }
+
+.bar-track {
+    flex: 1;
+    height: 8px;
+    background: rgba(0,0,0,0.15);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.3s ease, background 0.5s ease;
+}
+
+.bar-pct {
+    font-size: 0.62em;
+    font-weight: bold;
+    color: #333;
+    min-width: 28px;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+/* Animation critique (barre < 20%) */
+.bar-item.critical {
+    animation: blink-critical 0.6s ease-in-out infinite;
+}
+@keyframes blink-critical {
+    0%, 100% { box-shadow: 0 1px 4px rgba(0,0,0,0.25); }
+    50%       { box-shadow: 0 0 8px 2px rgba(220,50,50,0.6); }
+}
+
+/* ══════════ FOOTER ══════════ */
+.controls {
+    flex-shrink: 0;
+    background: rgba(163,210,228,0.90);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-top: 2px solid rgba(44,95,119,0.25);
+    padding: 4px 8px 5px;
+    display: flex; flex-direction: column; gap: 3px;
+    overscroll-behavior: none;
+}
+
+/* Ligne actions : instruction + manger/démolir */
+.controls-actions {
+    display: flex; align-items: center;
+    justify-content: space-between; gap: 8px;
+}
+
+.instruction {
+    display: flex; align-items: center; gap: 5px;
+    color: var(--deep-blue); flex: 1; min-width: 0; overflow: hidden;
+}
+.instruction .icon {
+    font-size: 1em; flex-shrink: 0;
+    animation: bounce 2s ease-in-out infinite;
+}
+.instruction span:last-child {
+    font-size: 0.7em; font-weight: 600;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); }
+}
+
+.action-buttons { display: flex; gap: 4px; flex-shrink: 0; }
+
+/* Ligne boutons de construction : UNE seule ligne scrollable */
+.controls-scroll {
+    display: flex; gap: 4px;
+    overflow-x: auto; scrollbar-width: none;
+    flex-wrap: nowrap; padding-bottom: 2px;
+}
+.controls-scroll::-webkit-scrollbar { display: none; }
+
+/* ══════════ BOUTONS ══════════ */
+.build-button {
+    background: linear-gradient(135deg, var(--wood-brown), #a67c52);
+    color: #fff;
+    border: 1.5px solid rgba(255,255,255,0.35);
+    padding: 5px 10px;
+    font-size: clamp(0.65em, 2vw, 0.78em);
+    font-weight: bold;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: 'Cabin', sans-serif;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+    min-height: 36px;
+    touch-action: manipulation;
+}
+
+.build-button:hover   { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+.build-button:active  { transform: scale(0.95); }
+.build-button:disabled{ opacity: 0.4; cursor: not-allowed; transform: none; }
+
+.build-button.active {
+    background: linear-gradient(135deg, var(--accent), #ff8c5a);
+    animation: pulse 1s ease-in-out infinite;
+}
+
+.eat-btn     { background: linear-gradient(135deg, #2a6e2a, #3a9e3a); }
+.eat-btn:hover { background: linear-gradient(135deg, #3a9e3a, #2a6e2a); }
+.orient-btn  { background: linear-gradient(135deg, #1a4a6a, #2a6a9a); }
+
+.demolish-button {
+    background: linear-gradient(135deg, #7a2020, #a03030);
+    border-color: rgba(255,170,170,0.4);
+}
+.demolish-button:hover  { background: linear-gradient(135deg, #a03030, #7a2020); }
+.demolish-button.active {
+    background: linear-gradient(135deg, #cc2020, #ff4040);
+    animation: pulseRed 1s ease-in-out infinite;
+}
+
+@keyframes pulseRed {
+    0%, 100% { box-shadow: 0 2px 8px rgba(220,50,50,0.4); }
+    50%       { box-shadow: 0 4px 16px rgba(220,50,50,0.7); }
+}
+@keyframes pulse {
+    0%, 100% { box-shadow: 0 2px 8px rgba(255,107,53,0.4); }
+    50%       { box-shadow: 0 4px 16px rgba(255,107,53,0.7); }
+}
+
+/* ══════════ RESPONSIVE MOBILE COMPACT ══════════ */
+@media (max-height: 500px) {
+    .header  { padding: 2px 8px 2px; }
+    h1       { font-size: 0.9em; }
+    .header-row-top { margin-bottom: 1px; }
+    .controls{ padding: 2px 6px 3px; gap: 2px; }
+    .instruction { display: none; }
+    .controls-actions { justify-content: flex-end; }
+    .build-button { min-height: 30px; padding: 3px 7px; }
+    .bar-item { min-width: 100px; }
+}
+
+@media (max-width: 400px) {
+    h1 { font-size: 0.85em; }
+    .meta-chip { padding: 1px 5px; }
+}

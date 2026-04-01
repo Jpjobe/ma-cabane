@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Générateur d'icônes — Ma Cabane</title>
+    <style>
+        body { font-family: Arial, sans-serif; background:#1a3a4a; color:#fff; text-align:center; padding:30px; }
+        h1 { margin-bottom:10px; }
+        p  { margin-bottom:20px; color:#a8d8ea; }
+        canvas { border:3px solid #a8d8ea; border-radius:12px; margin:10px; }
+        button {
+            display:inline-block; margin:8px; padding:12px 24px;
+            background:#ff6b35; color:#fff; border:none; border-radius:8px;
+            font-size:1em; font-weight:bold; cursor:pointer;
+        }
+        button:hover { background:#ff8c5a; }
+        .info { margin-top:20px; background:rgba(255,255,255,0.1); padding:15px; border-radius:10px; }
+    </style>
+</head>
+<body>
+    <h1>🏔 Génération des icônes PWA</h1>
+    <p>Ces icônes seront utilisées quand tu installes "Ma Cabane" sur ton téléphone.</p>
+
+    <canvas id="canvas512" width="512" height="512"></canvas>
+    <canvas id="canvas192" width="192" height="192"></canvas>
+
+    <br>
+    <button onclick="download('canvas512','icon-512.png')">⬇️ Télécharger icon-512.png</button>
+    <button onclick="download('canvas192','icon-192.png')">⬇️ Télécharger icon-192.png</button>
+
+    <div class="info">
+        <strong>Instruction :</strong><br>
+        Télécharge les 2 icônes et place-les dans le dossier <code>icons/</code> de "APK jeu ma cabane".
+    </div>
+
+    <script>
+    function drawIcon(canvas) {
+        const ctx = canvas.getContext('2d');
+        const w = canvas.width, h = canvas.height;
+        const s = w / 512; // facteur d'échelle
+
+        // Fond dégradé bleu hiver
+        const bg = ctx.createLinearGradient(0, 0, 0, h);
+        bg.addColorStop(0, '#1a3a4a');
+        bg.addColorStop(1, '#2c5f77');
+        ctx.fillStyle = bg;
+        ctx.beginPath();
+        ctx.roundRect(0, 0, w, h, 60 * s);
+        ctx.fill();
+
+        // Neige au sol
+        ctx.fillStyle = '#e8f4f8';
+        ctx.beginPath();
+        ctx.ellipse(w/2, h * 0.82, w * 0.45, h * 0.08, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Cabane — corps
+        ctx.fillStyle = '#8b5a3c';
+        const bx = w * 0.3, by = h * 0.52, bw = w * 0.4, bh = h * 0.28;
+        ctx.fillRect(bx, by, bw, bh);
+
+        // Cabane — toit
+        ctx.fillStyle = '#5a3820';
+        ctx.beginPath();
+        ctx.moveTo(w * 0.22, h * 0.54);
+        ctx.lineTo(w / 2,    h * 0.28);
+        ctx.lineTo(w * 0.78, h * 0.54);
+        ctx.closePath();
+        ctx.fill();
+
+        // Toit — neige
+        ctx.fillStyle = '#eef6fb';
+        ctx.beginPath();
+        ctx.moveTo(w * 0.24, h * 0.50);
+        ctx.lineTo(w / 2,    h * 0.28);
+        ctx.lineTo(w * 0.76, h * 0.50);
+        ctx.lineTo(w * 0.76, h * 0.54);
+        ctx.lineTo(w * 0.22, h * 0.54);
+        ctx.closePath();
+        ctx.fill();
+
+        // Porte
+        ctx.fillStyle = '#3a1e0a';
+        ctx.beginPath();
+        ctx.roundRect(w * 0.44, h * 0.63, w * 0.12, h * 0.17, 4 * s);
+        ctx.fill();
+
+        // Fenêtre
+        ctx.fillStyle = '#ffe88a';
+        ctx.fillRect(w * 0.33, h * 0.57, w * 0.1, h * 0.08);
+        ctx.fillRect(w * 0.57, h * 0.57, w * 0.1, h * 0.08);
+
+        // Cheminée
+        ctx.fillStyle = '#5a3820';
+        ctx.fillRect(w * 0.62, h * 0.30, w * 0.06, h * 0.14);
+
+        // Fumée
+        for (let i = 0; i < 3; i++) {
+            ctx.fillStyle = `rgba(200,200,200,${0.4 - i * 0.1})`;
+            ctx.beginPath();
+            ctx.arc(w * 0.65 + i * 3 * s, h * (0.26 - i * 0.04), 12 * s + i * 5 * s, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Sapin gauche
+        drawTree(ctx, w * 0.15, h * 0.72, 0.65 * s, w, h);
+
+        // Sapin droit
+        drawTree(ctx, w * 0.84, h * 0.72, 0.55 * s, w, h);
+
+        // Flocons de neige
+        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        const flakes = [[0.2,0.15],[0.5,0.1],[0.75,0.18],[0.35,0.22],[0.88,0.08]];
+        for (const [fx, fy] of flakes) {
+            ctx.beginPath();
+            ctx.arc(w * fx, h * fy, 4 * s, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Titre "MA CABANE" en bas
+        ctx.fillStyle = '#ffffff';
+        ctx.font = `bold ${36 * s}px 'Arial Black', Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowColor = 'rgba(0,0,0,0.6)';
+        ctx.shadowBlur = 6 * s;
+        ctx.fillText('MA CABANE', w / 2, h * 0.92);
+        ctx.shadowBlur = 0;
+    }
+
+    function drawTree(ctx, cx, base, scale, w, h) {
+        ctx.fillStyle = '#2a5a2a';
+        for (let i = 0; i < 3; i++) {
+            const tw = (60 - i * 12) * scale;
+            const th = 35 * scale;
+            const ty = base - (i * 28 * scale) - th;
+            ctx.beginPath();
+            ctx.moveTo(cx, ty);
+            ctx.lineTo(cx + tw, ty + th);
+            ctx.lineTo(cx - tw, ty + th);
+            ctx.closePath();
+            ctx.fill();
+        }
+        // Neige sur le sapin
+        ctx.fillStyle = 'rgba(235,248,255,0.7)';
+        for (let i = 0; i < 3; i++) {
+            const tw = (30 - i * 6) * scale;
+            const th = 14 * scale;
+            const ty = base - (i * 28 * scale) - 35 * scale;
+            ctx.beginPath();
+            ctx.moveTo(cx, ty);
+            ctx.lineTo(cx + tw, ty + th);
+            ctx.lineTo(cx - tw, ty + th);
+            ctx.closePath();
+            ctx.fill();
+        }
+    }
+
+    function download(canvasId, filename) {
+        const canvas = document.getElementById(canvasId);
+        const link = document.createElement('a');
+        link.download = filename;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    }
+
+    // Dessiner les deux tailles au chargement
+    drawIcon(document.getElementById('canvas512'));
+
+    // Redessiner en 192x192 (même code, canvas plus petit = auto-échelle)
+    drawIcon(document.getElementById('canvas192'));
+    </script>
+</body>
+</html>

@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2c5f77">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Ma Cabane">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>Ma Cabane</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Cabin:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <!-- Écran de chargement (overlay position:fixed, ne perturbe pas le layout) -->
+    <div id="loadingScreen">
+        <div class="loading-content">
+            <div class="loading-title">MA CABANE</div>
+            <div class="loading-sub">Chargement…</div>
+            <div class="loading-bar-bg">
+                <div class="loading-bar-fill" id="loadingBar"></div>
+            </div>
+            <div class="loading-hint">❄️ Prépare-toi à survivre à l'hiver !</div>
+        </div>
+    </div>
+
+    <div class="game-container">
+
+        <!-- ══════════ HEADER COMPACT ══════════ -->
+        <div class="header">
+
+            <!-- Ligne 1 : titre + saison + position -->
+            <div class="header-row header-row-top">
+                <h1>MA CABANE</h1>
+                <div class="header-metas">
+                    <div class="meta-chip season-chip"><span id="season">🌸 Printemps</span></div>
+                    <div class="meta-chip"><span class="meta-icon">📍</span><span id="position">0,0</span></div>
+                    <div class="meta-chip"><span class="meta-icon">🏠</span><span id="shelters">0</span></div>
+                    <div class="meta-chip"><span class="meta-icon">👥</span><span id="habitants">0</span></div>
+                </div>
+            </div>
+
+            <!-- Ligne 2 : ressources en grille compacte -->
+            <div class="header-row header-resources">
+                <div class="res-chip"><span class="res-icon">🪵</span><span id="wood">0</span></div>
+                <div class="res-chip"><span class="res-icon">🪨</span><span id="stone">0</span></div>
+                <div class="res-chip"><span class="res-icon">🌾</span><span id="wheat">0</span></div>
+                <div class="res-chip"><span class="res-icon">🐟</span><span id="fish">0</span></div>
+                <div class="res-chip"><span class="res-icon">🌾→</span><span id="flour">0</span></div>
+                <div class="res-chip"><span class="res-icon">🍞</span><span id="bread">0</span></div>
+                <div class="res-chip"><span class="res-icon">🍳</span><span id="cookedFish">0</span></div>
+            </div>
+
+        </div>
+
+        <!-- ══════════ CANVAS + JAUGES OVERLAY ══════════ -->
+        <div class="canvas-wrapper">
+            <canvas id="gameCanvas"></canvas>
+
+            <!-- Jauges faim/froid en overlay HTML (pas dessinées sur le canvas) -->
+            <div class="stat-overlay">
+                <div class="bar-item" id="hungerBarEl">
+                    <span class="bar-icon">🍖</span>
+                    <div class="bar-track">
+                        <div class="bar-fill" id="hungerFill"></div>
+                    </div>
+                    <span class="bar-pct" id="hungerPct">100%</span>
+                </div>
+                <div class="bar-item" id="coldBarEl">
+                    <span class="bar-icon">❄️</span>
+                    <div class="bar-track">
+                        <div class="bar-fill" id="coldFill"></div>
+                    </div>
+                    <span class="bar-pct" id="coldPct">100%</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════ FOOTER ══════════ -->
+        <div class="controls">
+
+            <!-- Ligne actions : manger + démolir toujours visibles -->
+            <div class="controls-actions">
+                <div class="instruction">
+                    <span class="icon">👆</span>
+                    <span>Touche la carte pour te déplacer</span>
+                </div>
+                <div class="action-buttons">
+                    <button id="eatBtn" class="build-button eat-btn">🍽️ Manger</button>
+                    <button id="demolishBtn" class="build-button demolish-button">🗑️ Démolir</button>
+                </div>
+            </div>
+
+            <!-- Ligne construction : boutons scrollables horizontalement -->
+            <div class="controls-scroll">
+                <button id="buildBtn" class="build-button">🏠 Abri (5🪵)</button>
+                <button id="fieldBtn" class="build-button">🌾 Champ (3🪵)</button>
+                <button id="palisadeBtn" class="build-button">🛡️ Palissade (2🪵)</button>
+                <button id="towerBtn" class="build-button">🗼 Tour (8🪵+5🪨)</button>
+                <button id="bridgeBtn" class="build-button">🌉 Pont (5🪵)</button>
+                <button id="bridgeOrientBtn" class="build-button orient-btn">🌉 Orient.A</button>
+                <button id="campfireBtn" class="build-button">🔥 Feu (3🪵)</button>
+                <button id="poissonnierieBtn" class="build-button">🐟 Poissonnerie (6🪵)</button>
+                <button id="millBtn" class="build-button">⚙️ Moulin (10🪵+5🌾)</button>
+                <button id="bakeryBtn" class="build-button">🥖 Boulangerie (8🪵)</button>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+
+    <script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./service-worker.js')
+                .then(r  => console.log('[PWA] SW enregistré, scope:', r.scope))
+                .catch(e => console.error('[PWA] SW échec:', e));
+        });
+    }
+    </script>
+</body>
+</html>
