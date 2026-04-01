@@ -65,6 +65,189 @@ const CONFIG = {
 };
 
 // ========================================
+// SONS — Web Audio API (aucun fichier externe)
+// Tous les sons sont générés par code JavaScript
+// ========================================
+const SOUNDS = (() => {
+    let audioCtx = null;
+
+    // Crée ou récupère le contexte audio (créé au premier son pour respecter les règles navigateur)
+    function getCtx() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        // Sur mobile le contexte peut être suspendu après inactivité
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        return audioCtx;
+    }
+
+    // Coup de hache — couper un arbre
+    function chop() {
+        const ac = getCtx();
+        const buf = ac.createBuffer(1, ac.sampleRate * 0.18, ac.sampleRate);
+        const d = buf.getChannelData(0);
+        for (let i = 0; i < d.length; i++) {
+            d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3);
+        }
+        const src = ac.createBufferSource();
+        src.buffer = buf;
+        const filter = ac.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 350;
+        const gain = ac.createGain();
+        gain.gain.setValueAtTime(1.3, ac.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.18);
+        src.connect(filter);
+        filter.connect(gain);
+        gain.connect(ac.destination);
+        src.start();
+    }
+
+    // Ramassage — collecter une ressource (bois, pierre...)
+    function collect() {
+        const ac = getCtx();
+        const osc = ac.createOscillator();
+        const gain = ac.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(440, ac.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(700, ac.currentTime + 0.09);
+        gain.gain.setValueAtTime(0.28, ac.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.13);
+        osc.connect(gain);
+        gain.connect(ac.destination);
+        osc.start();
+        osc.stop(ac.currentTime + 0.13);
+    }
+
+    // Construction — poser un bâtiment
+    function build() {
+        const ac = getCtx();
+        for (let i = 0; i < 3; i++) {
+            const t = ac.currentTime + i * 0.09;
+            const buf = ac.createBuffer(1, ac.sampleRate * 0.07, ac.sampleRate);
+            const d = buf.getChannelData(0);
+            for (let j = 0; j < d.length; j++) {
+                d[j] = (Math.random() * 2 - 1) * Math.pow(1 - j / d.length, 2);
+            }
+            const src = ac.createBufferSource();
+            src.buffer = buf;
+            const filter = ac.createBiquadFilter();
+            filter.type = 'bandpass';
+            filter.frequency.value = 900 - i * 100;
+            const gain = ac.createGain();
+            gain.gain.setValueAtTime(0.7, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
+            src.connect(filter);
+            filter.connect(gain);
+            gain.connect(ac.destination);
+            src.start(t);
+        }
+    }
+
+    // Attaque de loup — grognement grave
+    function wolfAttack() {
+        const ac = getCtx();
+        const osc = ac.createOscillator();
+        const gain = ac.createGain();
+        const distortion = ac.createWaveShaper();
+        const curve = new Float32Array(256);
+        for (let i = 0; i < 256; i++) {
+            const x = (i * 2) / 256 - 1;
+            curve[i] = (Math.PI + 180) * x / (Math.PI + 180 * Math.abs(x));
+        }
+        distortion.curve = curve;
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(90, ac.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(38, ac.currentTime + 0.55);
+        gain.gain.setValueAtTime(0.55, ac.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.6);
+        osc.connect(distortion);
+        distortion.connect(gain);
+        gain.connect(ac.destination);
+        osc.start();
+        osc.stop(ac.currentTime + 0.6);
+    }
+
+    // Manger — son de mastication
+    function eat() {
+        const ac = getCtx();
+        for (let i = 0; i < 3; i++) {
+            const t = ac.currentTime + i * 0.075;
+            const osc = ac.createOscillator();
+            const gain = ac.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(310 - i * 35, t);
+            osc.frequency.exponentialRampToValueAtTime(160, t + 0.065);
+            gain.gain.setValueAtTime(0.22, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
+            osc.connect(gain);
+            gain.connect(ac.destination);
+            osc.start(t);
+            osc.stop(t + 0.075);
+        }
+    }
+
+    // Pêche — splash + ding de victoire
+    function fishCatch() {
+        const ac = getCtx();
+        // Splash (bruit filtré)
+        const buf = ac.createBuffer(1, ac.sampleRate * 0.18, ac.sampleRate);
+        const d = buf.getChannelData(0);
+        for (let i = 0; i < d.length; i++) {
+            d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 1.8);
+        }
+        const src = ac.createBufferSource();
+        src.buffer = buf;
+        const filter = ac.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.value = 1100;
+        filter.Q.value = 0.6;
+        const gSplash = ac.createGain();
+        gSplash.gain.setValueAtTime(0.45, ac.currentTime);
+        src.connect(filter);
+        filter.connect(gSplash);
+        gSplash.connect(ac.destination);
+        src.start();
+        // Ding de succès
+        const osc = ac.createOscillator();
+        const gDing = ac.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, ac.currentTime + 0.12);
+        osc.frequency.exponentialRampToValueAtTime(1320, ac.currentTime + 0.28);
+        gDing.gain.setValueAtTime(0.28, ac.currentTime + 0.12);
+        gDing.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.42);
+        osc.connect(gDing);
+        gDing.connect(ac.destination);
+        osc.start(ac.currentTime + 0.12);
+        osc.stop(ac.currentTime + 0.42);
+    }
+
+    // Feu qui crépite — un petit pop aléatoire (appelé en boucle)
+    function crackle() {
+        const ac = getCtx();
+        const buf = ac.createBuffer(1, ac.sampleRate * 0.035, ac.sampleRate);
+        const d = buf.getChannelData(0);
+        for (let i = 0; i < d.length; i++) {
+            d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 5);
+        }
+        const src = ac.createBufferSource();
+        src.buffer = buf;
+        const filter = ac.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.value = 1400 + Math.random() * 1200;
+        filter.Q.value = 1.2;
+        const gain = ac.createGain();
+        gain.gain.setValueAtTime(0.08 + Math.random() * 0.12, ac.currentTime);
+        src.connect(filter);
+        filter.connect(gain);
+        gain.connect(ac.destination);
+        src.start();
+    }
+
+    return { chop, collect, build, wolfAttack, eat, fishCatch, crackle };
+})();
+
+// ========================================
 // INITIALISATION DU CANVAS
 // ========================================
 const canvas = document.getElementById('gameCanvas');
@@ -2457,6 +2640,7 @@ function updateWolves() {
         // Attaque si à portée
         if (dist < CONFIG.wolfAttackRange && wolf.attackCooldown === 0) {
             player.hunger = Math.max(0, player.hunger - CONFIG.wolfDamage);
+            SOUNDS.wolfAttack();
             wolf.attackCooldown = CONFIG.wolfAttackInterval;
             spawnPopup('🐺 Attaque !', Math.round(wolf.x), Math.round(wolf.y));
         }
@@ -2512,6 +2696,7 @@ function checkWoodCollection() {
         if (distance < collectionRange) {
             // Ramasser le bois !
             player.wood += wood.amount;
+            SOUNDS.collect();
             spawnPopup(`+${wood.amount} Bois`, wood.x, wood.y);
             woodPiles.splice(i, 1); // Retirer la pile de la carte
             updateWoodDisplay();
@@ -2607,6 +2792,7 @@ function checkTreeCutting() {
             tree.cuttingProgress = 0;
             tree.regrowTimer = CONFIG.treeRegrowTime;
             player.wood += CONFIG.woodPerTree;
+            SOUNDS.chop();
             player.cuttingTarget = null;
             spawnPopup(`+${CONFIG.woodPerTree} 🪵 Bois`, tree.x, tree.y);
             updateWoodDisplay();
@@ -2713,6 +2899,7 @@ function checkFishing() {
     if (player.fishingTimer >= CONFIG.fishingDuration) {
         // Poisson attrapé !
         player.fish++;
+        SOUNDS.fishCatch();
         player.fishingTimer   = 0;
         player.fishingCooldown = CONFIG.fishingCooldown;
         spawnPopup('🐟 +1 Poisson !', Math.round(player.x), Math.round(player.y));
@@ -3061,6 +3248,8 @@ function updateCold() {
         const dy = player.y - campfire.y;
         if (Math.sqrt(dx * dx + dy * dy) <= 2) {
             player.cold = Math.min(100, player.cold + CONFIG.coldFromCampfire);
+            // Crépitement aléatoire (~1 fois/seconde en moyenne)
+            if (Math.random() < 0.016) SOUNDS.crackle();
             break; // Un seul feu suffit
         }
     }
@@ -3124,16 +3313,19 @@ function eatFood() {
     if (player.cookedFish > 0) {
         player.cookedFish--;
         player.hunger = Math.min(100, player.hunger + CONFIG.hungerFromCookedFish);
+        SOUNDS.eat();
         spawnPopup(`+${CONFIG.hungerFromCookedFish} 🐟 Savoureux !`, player.x, player.y);
         updateCookedFishDisplay();
     } else if (player.bread > 0) {
         player.bread--;
         player.hunger = Math.min(100, player.hunger + CONFIG.hungerFromBread);
+        SOUNDS.eat();
         spawnPopup(`+${CONFIG.hungerFromBread} 🍞 Délicieux !`, player.x, player.y);
         updateBreadDisplay();
     } else if (player.fish > 0) {
         player.fish--;
         player.hunger = Math.min(100, player.hunger + CONFIG.hungerFromRawFish);
+        SOUNDS.eat();
         spawnPopup(`+${CONFIG.hungerFromRawFish} 🐟 Bof, c'était cru...`, player.x, player.y);
         updateFishDisplay();
     } else {
@@ -3630,6 +3822,7 @@ canvas.addEventListener('click', (e) => {
             } else if (player.wood >= CONFIG.bridgeCost) {
                 bridges.push({ x: gridPos.x, y: gridPos.y, orientation: bridgeOrientation });
                 player.wood -= CONFIG.bridgeCost;
+                SOUNDS.build();
                 spawnPopup('🌉 Pont construit !', gridPos.x, gridPos.y);
                 updateWoodDisplay();
             } else {
@@ -3649,6 +3842,7 @@ canvas.addEventListener('click', (e) => {
                     depositCooldown: 0
                 });
                 player.wood -= CONFIG.poissonerieCostWood;
+                SOUNDS.build();
                 spawnPopup('🐟 Poissonnerie construite !', gridPos.x, gridPos.y);
                 updateWoodDisplay();
             } else {
@@ -3668,6 +3862,7 @@ canvas.addEventListener('click', (e) => {
                     depositCooldown: 0
                 });
                 player.wood -= CONFIG.bakeryCostWood;
+                SOUNDS.build();
                 spawnPopup('🥖 Boulangerie construite !', gridPos.x, gridPos.y);
                 updateWoodDisplay();
             } else {
@@ -3682,6 +3877,7 @@ canvas.addEventListener('click', (e) => {
             } else if (player.wood >= CONFIG.campfireCost) {
                 campfires.push({ x: gridPos.x, y: gridPos.y, cookingFish: false, cookProgress: 0 });
                 player.wood -= CONFIG.campfireCost;
+                SOUNDS.build();
                 spawnPopup('🔥 Feu de camp allumé !', gridPos.x, gridPos.y);
                 updateWoodDisplay();
             } else {
@@ -3704,6 +3900,7 @@ canvas.addEventListener('click', (e) => {
                     });
                     player.wood  -= CONFIG.millCostWood;
                     player.wheat -= CONFIG.millCostWheat;
+                    SOUNDS.build();
                     spawnPopup('⚙️ Moulin construit !', gridPos.x, gridPos.y);
                     updateWoodDisplay();
                     updateWheatDisplay();
@@ -3785,6 +3982,7 @@ canvas.addEventListener('click', (e) => {
                     towers.push({ x: gridPos.x, y: gridPos.y });
                     player.wood  -= CONFIG.towerCostWood;
                     player.stone -= CONFIG.towerCostStone;
+                    SOUNDS.build();
                     spawnPopup('🗼 Tour construite !', gridPos.x, gridPos.y);
                     updateWoodDisplay();
                     updateStoneDisplay();
@@ -3802,6 +4000,7 @@ canvas.addEventListener('click', (e) => {
                 if (!alreadyThere) {
                     palisades.push({ x: gridPos.x, y: gridPos.y });
                     player.wood -= CONFIG.palisadeCost;
+                    SOUNDS.build();
                     spawnPopup('🛡️ Palissade !', gridPos.x, gridPos.y);
                     updateWoodDisplay();
                 }
@@ -3824,6 +4023,7 @@ canvas.addEventListener('click', (e) => {
                         growTimer: CONFIG.growthStageTime
                     });
                     player.wood -= CONFIG.fieldCost;
+                    SOUNDS.build();
                     spawnPopup('🌾 Champ planté !', gridPos.x, gridPos.y);
                     updateWoodDisplay();
                 }
@@ -3839,6 +4039,7 @@ canvas.addEventListener('click', (e) => {
                 const newShelter = { x: gridPos.x, y: gridPos.y, level: 1 };
                 shelters.push(newShelter);
                 player.wood -= SHELTER_COST;
+                SOUNDS.build();
                 spawnPopup('🏠 Abri construit !', gridPos.x, gridPos.y);
                 updateWoodDisplay();
                 updateShelterDisplay();
