@@ -902,7 +902,7 @@ function drawTree(tree) {
     const treeSprite = getSprite('tree');
     if (treeSprite) {
         const baseY = y + CONFIG.tileSize / 4;
-        const h = 100;
+        const h = 55;
         const w = treeSprite.width * (h / treeSprite.height);
         ctx.drawImage(treeSprite, x - w / 2, baseY - h, w, h);
         return;
@@ -1014,7 +1014,7 @@ function drawWood(wood) {
     const woodSprite = getSprite('wood');
     if (woodSprite) {
         const baseY = y + CONFIG.tileSize / 4;
-        const h = 50;
+        const h = 30;
         const w = woodSprite.width * (h / woodSprite.height);
         ctx.drawImage(woodSprite, x - w / 2, baseY - h, w, h);
         // Indicateur de quantité
@@ -1110,7 +1110,7 @@ function drawShelter(shelter) {
     const shelterSprite = shelter.level >= 2 ? getSprite('shelter2') : getSprite('shelter');
     if (shelterSprite) {
         const baseY = y + CONFIG.tileSize / 4;
-        const h = 120;
+        const h = 70;
         const w = shelterSprite.width * (h / shelterSprite.height);
         ctx.drawImage(shelterSprite, x - w / 2, baseY - h, w, h);
         // Fumée animée (conservée même avec le sprite)
@@ -2211,7 +2211,7 @@ function drawPlayer() {
     const playerSprite = getSprite('player');
     if (playerSprite) {
         const baseY = y + CONFIG.tileSize / 4;
-        const h = 60;
+        const h = 35;
         const w = playerSprite.width * (h / playerSprite.height);
         const bob = player.isMoving ? Math.abs(Math.sin(player.walkCycle)) * 1.5 : 0;
         // Miroir horizontal si le joueur se dirige vers la gauche (targetX < x)

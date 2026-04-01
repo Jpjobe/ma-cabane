@@ -332,6 +332,35 @@ h1 {
     .meta-chip { padding: 1px 5px; }
 }
 
+.button-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 5px;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.action-btn, .build-btn {
+    padding: 8px 12px;
+    font-size: 0.9em;
+    border-radius: 8px;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    white-space: nowrap;
+    touch-action: manipulation;
+}
+
+.action-btn {
+    background: linear-gradient(135deg, #ff6b35, #ff8c5a);
+    color: white;
+}
+
+.build-btn {
+    background: linear-gradient(135deg, #8d6e63, #a1887f);
+    color: white;
+}
+
 .hunger-bar, .cold-bar {
     position: absolute;
     top: 70px;

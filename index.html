@@ -85,30 +85,26 @@
         <!-- ══════════ FOOTER ══════════ -->
         <div class="controls">
 
-            <!-- Ligne actions : manger + démolir toujours visibles -->
-            <div class="controls-actions">
-                <div class="instruction">
-                    <span class="icon">👆</span>
-                    <span>Touche la carte pour te déplacer</span>
-                </div>
-                <div class="action-buttons">
-                    <button id="eatBtn" class="build-button eat-btn">🍽️ Manger</button>
-                    <button id="demolishBtn" class="build-button demolish-button">🗑️ Démolir</button>
-                </div>
+            <div class="instruction">
+                <span class="icon">👆</span>
+                <p>Touche la carte pour déplacer</p>
             </div>
 
-            <!-- Ligne construction : boutons scrollables horizontalement -->
-            <div class="controls-scroll">
-                <button id="buildBtn" class="build-button">🏠 Abri (5🪵)</button>
-                <button id="fieldBtn" class="build-button">🌾 Champ (3🪵)</button>
-                <button id="palisadeBtn" class="build-button">🛡️ Palissade (2🪵)</button>
-                <button id="towerBtn" class="build-button">🗼 Tour (8🪵+5🪨)</button>
-                <button id="bridgeBtn" class="build-button">🌉 Pont (5🪵)</button>
-                <button id="bridgeOrientBtn" class="build-button orient-btn">🌉 Orient.A</button>
-                <button id="campfireBtn" class="build-button">🔥 Feu (3🪵)</button>
-                <button id="poissonnierieBtn" class="build-button">🐟 Poissonnerie (6🪵)</button>
-                <button id="millBtn" class="build-button">⚙️ Moulin (10🪵+5🌾)</button>
-                <button id="bakeryBtn" class="build-button">🥖 Boulangerie (8🪵)</button>
+            <div class="button-grid">
+                <!-- Ligne 1 : Actions principales -->
+                <button id="eatBtn" class="action-btn">🍽️ Manger</button>
+                <button id="demolishBtn" class="action-btn">🗑️ Démolir</button>
+                <!-- Ligne 2+ : Construction -->
+                <button id="buildBtn" class="build-btn">🏠 Abri</button>
+                <button id="fieldBtn" class="build-btn">🌾 Champ</button>
+                <button id="palisadeBtn" class="build-btn">🛡️ Palissade</button>
+                <button id="towerBtn" class="build-btn">🗼 Tour</button>
+                <button id="bridgeBtn" class="build-btn">🌉 Pont</button>
+                <button id="bridgeOrientBtn" class="build-btn">🔄 Orient.</button>
+                <button id="campfireBtn" class="build-btn">🔥 Feu</button>
+                <button id="poissonnierieBtn" class="build-btn">🐟 Poissonnerie</button>
+                <button id="millBtn" class="build-btn">⚙️ Moulin</button>
+                <button id="bakeryBtn" class="build-btn">🥖 Boulangerie</button>
             </div>
 
         </div>
