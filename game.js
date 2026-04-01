@@ -256,13 +256,35 @@ const ctx = canvas.getContext('2d');
 // Redimensionne le canvas.
 // Le canvas est dans .canvas-wrapper (flex:1, height:100%) donc
 // canvas.offsetWidth et canvas.offsetHeight sont toujours corrects.
+// Zoom appliqué au rendu (calculé selon la taille du canvas)
+let currentZoom = 1;
+
+// Calcule le zoom pour que toute la carte isométrique rentre à l'écran
+function calculateZoom() {
+    if (canvas.width === 0 || canvas.height === 0) return 1;
+    // Étendue horizontale de la carte en pixels isométriques
+    const isoWorldWidth  = (CONFIG.worldWidth + CONFIG.worldHeight) * (CONFIG.tileSize / 2);
+    // Étendue verticale (hauteur Y iso + décalage haut)
+    const isoWorldHeight = (CONFIG.worldWidth + CONFIG.worldHeight) * (CONFIG.tileSize / 4) + 120;
+    const zoomX = canvas.width  / isoWorldWidth;
+    const zoomY = canvas.height / isoWorldHeight;
+    // On prend le plus petit des deux, avec un max de 1 (pas de zoom avant)
+    return Math.min(zoomX, zoomY, 1);
+}
+
 function resizeCanvas() {
+    // Correctif mobile : 100vh inclut parfois les barres du navigateur.
+    // On force la hauteur réelle du conteneur via window.innerHeight.
+    const container = document.querySelector('.game-container');
+    if (container) container.style.height = window.innerHeight + 'px';
+
     const w = canvas.offsetWidth;
     const h = canvas.offsetHeight;
     if (w > 0 && h > 0) {
         canvas.width  = w;
         canvas.height = h;
     }
+    currentZoom = calculateZoom();
 }
 
 window.addEventListener('resize', resizeCanvas);
@@ -447,20 +469,24 @@ function gridToIso(gridX, gridY) {
 }
 
 // Convertit des coordonnées d'écran en coordonnées de grille
+// Tient compte du zoom appliqué au rendu.
 function isoToGrid(screenX, screenY) {
-    // Centrage de la carte
+    // Annuler la translation (centrage horizontal avec zoom)
+    const logicalX = (screenX - canvas.width / 2 * (1 - currentZoom)) / currentZoom;
+    const logicalY = screenY / currentZoom;
+
     const offsetX = canvas.width / 2;
     const offsetY = 100;
-    
-    const x = screenX - offsetX;
-    const y = screenY - offsetY;
-    
+
+    const x = logicalX - offsetX;
+    const y = logicalY - offsetY;
+
     const gridX = (x / (CONFIG.tileSize / 2) + y / (CONFIG.tileSize / 4)) / 2;
     const gridY = (y / (CONFIG.tileSize / 4) - x / (CONFIG.tileSize / 2)) / 2;
-    
-    return { 
-        x: Math.round(gridX), 
-        y: Math.round(gridY) 
+
+    return {
+        x: Math.round(gridX),
+        y: Math.round(gridY)
     };
 }
 
@@ -3601,8 +3627,12 @@ function gameLoop() {
 
     // Si game over : afficher l'écran et arrêter la logique
     if (gameOver) {
+        ctx.save();
+        ctx.translate(canvas.width / 2 * (1 - currentZoom), 0);
+        ctx.scale(currentZoom, currentZoom);
         drawGround();
-        drawGameOver();
+        ctx.restore();
+        drawGameOver(); // overlay plein écran, pas zoomé
         requestAnimationFrame(gameLoop);
         return;
     }
@@ -3691,7 +3721,11 @@ function gameLoop() {
     // Mettre à jour la saison
     updateSeason();
 
-    // Dessiner tout
+    // ── RENDU ZOOMÉ : tout ce qui est ancré dans la grille ──
+    ctx.save();
+    ctx.translate(canvas.width / 2 * (1 - currentZoom), 0);
+    ctx.scale(currentZoom, currentZoom);
+
     drawGround();
     drawRiver();     // Rivière par-dessus la neige
     drawAllFields(); // Champs dessinés sur le sol, avant les entités
@@ -3733,11 +3767,17 @@ function gameLoop() {
         else if (entity.type === 'player')   drawPlayer();
     });
 
-    // Particules atmosphériques de la saison (pétales, neige, feuilles...)
-    drawSeasonParticles();
+    // Indicateur de pêche et overlay démolition (ancrés dans la grille → zoomés)
+    drawFishingIndicator();
+    drawDemolishOverlay();
+    updateAndDrawPopups();
 
-    // Teinte saisonnière légère sur toute la scène
-    drawSeasonOverlay();
+    ctx.restore();
+    // ── FIN DU RENDU ZOOMÉ ──
+
+    // Effets plein écran (pas zoomés : couvrent tout le canvas)
+    drawSeasonParticles(); // neige, feuilles, pétales
+    drawSeasonOverlay();   // teinte saisonnière légère
 
     // Fondu blanc lors d'un changement de saison
     if (seasonTransitionAlpha > 0) {
@@ -3745,16 +3785,7 @@ function gameLoop() {
         ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
 
-    // Indicateur de pêche (au-dessus du joueur)
-    drawFishingIndicator();
-
-    // Overlay de démolition (par-dessus les entités, sous les popups)
-    drawDemolishOverlay();
-
-    // Dessiner les popups par-dessus tout le reste
-    updateAndDrawPopups();
-
-    // Mise à jour des jauges HTML overlay (remplace le dessin canvas)
+    // Mise à jour des jauges HTML overlay
     updateHTMLBars();
 
     // Continuer la boucle
