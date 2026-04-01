@@ -4,7 +4,7 @@ Jeu de survie isométrique inspiré de Whiteout Survival.
 
 ## Jouer
 
-👉 [Jouer en ligne](https://TON-USERNAME.github.io/ma-cabane/)
+👉 [Jouer en ligne](https://jpjobe.github.io/ma-cabane/)
 
 ## Description
 
