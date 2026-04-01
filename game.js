@@ -2,9 +2,9 @@
 // CONFIGURATION DU JEU
 // ========================================
 const CONFIG = {
-    tileSize: 64,           // Taille d'une tuile en pixels
-    worldWidth: 20,         // Largeur du monde en tuiles
-    worldHeight: 20,        // Hauteur du monde en tuiles
+    tileSize: 32,           // Taille d'une tuile en pixels
+    worldWidth: 15,         // Largeur du monde en tuiles
+    worldHeight: 15,        // Hauteur du monde en tuiles
     playerSpeed: 0.1,       // Vitesse de déplacement du joueur (0-1)
     woodPerTree: 3,         // Bois obtenu en coupant un sapin
     treeCutDuration: 80,    // Frames pour couper un arbre (~1.3s à 60fps)
@@ -273,18 +273,16 @@ function calculateZoom() {
 }
 
 function resizeCanvas() {
-    // Correctif mobile : 100vh inclut parfois les barres du navigateur.
-    // On force la hauteur réelle du conteneur via window.innerHeight.
-    const container = document.querySelector('.game-container');
-    if (container) container.style.height = window.innerHeight + 'px';
+    const header = document.querySelector('.header');
+    const footer = document.querySelector('.controls');
 
-    const w = canvas.offsetWidth;
-    const h = canvas.offsetHeight;
-    if (w > 0 && h > 0) {
-        canvas.width  = w;
-        canvas.height = h;
-    }
-    currentZoom = calculateZoom();
+    const headerHeight = header ? header.offsetHeight : 0;
+    const footerHeight = 60; // Hauteur fixe du footer
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight - headerHeight - footerHeight - 10;
+
+    console.log('Canvas resized:', canvas.width, 'x', canvas.height);
 }
 
 window.addEventListener('resize', resizeCanvas);
