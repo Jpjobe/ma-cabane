@@ -847,40 +847,41 @@ function drawTree(tree) {
     // --- Souche (arbre coupé) ---
     if (tree.chopped) {
         const baseY = y + CONFIG.tileSize / 4;
+        const s = CONFIG.tileSize / 32; // facteur d'échelle
         // Ombre
         ctx.fillStyle = 'rgba(0,0,0,0.15)';
         ctx.beginPath();
-        ctx.ellipse(x + 3, baseY + 2, 14, 5, 0.15, 0, Math.PI * 2);
+        ctx.ellipse(x + 3 * s, baseY + 2 * s, 14 * s, 5 * s, 0.15, 0, Math.PI * 2);
         ctx.fill();
         // Corps de la souche
         ctx.fillStyle = '#7a4828';
-        ctx.fillRect(x - 7, baseY - 14, 14, 14);
+        ctx.fillRect(x - 7 * s, baseY - 14 * s, 14 * s, 14 * s);
         // Face latérale (profondeur iso)
         ctx.fillStyle = '#5a3010';
         ctx.beginPath();
-        ctx.moveTo(x + 7, baseY - 14);
-        ctx.lineTo(x + 12, baseY - 10);
-        ctx.lineTo(x + 12, baseY);
-        ctx.lineTo(x + 7, baseY);
+        ctx.moveTo(x + 7 * s, baseY - 14 * s);
+        ctx.lineTo(x + 12 * s, baseY - 10 * s);
+        ctx.lineTo(x + 12 * s, baseY);
+        ctx.lineTo(x + 7 * s, baseY);
         ctx.closePath();
         ctx.fill();
         // Dessus de la souche (section coupée)
         ctx.fillStyle = '#c8804a';
         ctx.beginPath();
-        ctx.ellipse(x + 2, baseY - 14, 9, 5, 0, 0, Math.PI * 2);
+        ctx.ellipse(x + 2 * s, baseY - 14 * s, 9 * s, 5 * s, 0, 0, Math.PI * 2);
         ctx.fill();
         // Anneaux de croissance
         ctx.strokeStyle = '#8a5020';
-        ctx.lineWidth = 0.7;
+        ctx.lineWidth = 0.7 * s;
         for (let r = 1; r <= 3; r++) {
             ctx.beginPath();
-            ctx.ellipse(x + 2, baseY - 14, r * 2.5, r * 1.4, 0, 0, Math.PI * 2);
+            ctx.ellipse(x + 2 * s, baseY - 14 * s, r * 2.5 * s, r * 1.4 * s, 0, 0, Math.PI * 2);
             ctx.stroke();
         }
         // Neige sur le dessus
         ctx.fillStyle = 'rgba(235,248,255,0.7)';
         ctx.beginPath();
-        ctx.ellipse(x + 2, baseY - 14, 6, 3, 0, 0, Math.PI * 2);
+        ctx.ellipse(x + 2 * s, baseY - 14 * s, 6 * s, 3 * s, 0, 0, Math.PI * 2);
         ctx.fill();
         return;
     }
@@ -4519,12 +4520,10 @@ popupOverlay.addEventListener('click', () => {
 // Griser les cartes si pas assez de ressources
 function updateBuildCards() {
     buildCards.forEach(card => {
-        const cost = parseInt(card.dataset.cost);
-        if (player.wood < cost) {
-            card.classList.add('disabled');
-        } else {
-            card.classList.remove('disabled');
-        }
+        const costWood  = parseInt(card.dataset.cost);
+        const costStone = parseInt(card.dataset.costStone || '0');
+        const canAfford = player.wood >= costWood && player.stone >= costStone;
+        card.classList.toggle('disabled', !canAfford);
     });
 }
 
@@ -4534,8 +4533,13 @@ buildCards.forEach(card => {
         const buildType = card.dataset.build;
         const cost      = parseInt(card.dataset.cost);
 
+        const costStone = parseInt(card.dataset.costStone || '0');
         if (player.wood < cost) {
             spawnPopup('❌ Pas assez de bois !', player.x, player.y);
+            return;
+        }
+        if (costStone > 0 && player.stone < costStone) {
+            spawnPopup(`❌ Il faut aussi ${costStone} 🪨 !`, player.x, player.y);
             return;
         }
 
@@ -4578,6 +4582,10 @@ buildCards.forEach(card => {
             case 'campfire':
                 buildCampfireMode = true;
                 updateCampfireButton();
+                break;
+            case 'tower':
+                buildTowerMode = true;
+                updateTowerButton();
                 break;
         }
     });
