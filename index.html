@@ -82,31 +82,70 @@
             </div>
         </div>
 
-        <!-- ══════════ FOOTER ══════════ -->
+        <!-- ══════════ FOOTER COMPACT ══════════ -->
         <div class="controls">
-
-            <div class="instruction">
-                <span class="icon">👆</span>
-                <p>Touche la carte pour déplacer</p>
+            <div class="instruction-mobile">
+                👆 Touche la carte • 🪵 Ramasser
             </div>
-
-            <div class="button-grid">
-                <!-- Ligne 1 : Actions principales -->
-                <button id="eatBtn" class="action-btn">🍽️ Manger</button>
-                <button id="demolishBtn" class="action-btn">🗑️ Démolir</button>
-                <!-- Ligne 2+ : Construction -->
-                <button id="buildBtn" class="build-btn">🏠 Abri</button>
-                <button id="fieldBtn" class="build-btn">🌾 Champ</button>
-                <button id="palisadeBtn" class="build-btn">🛡️ Palissade</button>
-                <button id="towerBtn" class="build-btn">🗼 Tour</button>
-                <button id="bridgeBtn" class="build-btn">🌉 Pont</button>
-                <button id="bridgeOrientBtn" class="build-btn">🔄 Orient.</button>
-                <button id="campfireBtn" class="build-btn">🔥 Feu</button>
-                <button id="poissonnierieBtn" class="build-btn">🐟 Poissonnerie</button>
-                <button id="millBtn" class="build-btn">⚙️ Moulin</button>
-                <button id="bakeryBtn" class="build-btn">🥖 Boulangerie</button>
+            <div class="action-buttons">
+                <button id="eatBtn" class="footer-btn action">🍖 Manger</button>
+                <button id="buildMenuBtn" class="footer-btn build">⚒️ Construire</button>
+                <button id="demolishBtn" class="footer-btn danger">🗑️ Démolir</button>
             </div>
+        </div>
 
+        <!-- ══════════ POPUP DE CONSTRUCTION ══════════ -->
+        <div id="buildPopup" class="build-popup hidden">
+            <div class="popup-overlay"></div>
+            <div class="popup-content">
+                <div class="popup-header">
+                    <h3>⚒️ Constructions</h3>
+                    <button class="popup-close" id="closePopupBtn">✖</button>
+                </div>
+
+                <div class="build-carousel">
+                    <div class="build-card" data-build="shelter" data-cost="5">
+                        <div class="build-icon">🏠</div>
+                        <div class="build-name">Abri</div>
+                        <div class="build-cost">💰 5 🪵</div>
+                    </div>
+                    <div class="build-card" data-build="field" data-cost="3">
+                        <div class="build-icon">🌾</div>
+                        <div class="build-name">Champ</div>
+                        <div class="build-cost">💰 3 🪵</div>
+                    </div>
+                    <div class="build-card" data-build="fence" data-cost="2">
+                        <div class="build-icon">🚧</div>
+                        <div class="build-name">Palissade</div>
+                        <div class="build-cost">💰 2 🪵</div>
+                    </div>
+                    <div class="build-card" data-build="bridge" data-cost="5">
+                        <div class="build-icon">🌉</div>
+                        <div class="build-name">Pont</div>
+                        <div class="build-cost">💰 5 🪵</div>
+                    </div>
+                    <div class="build-card" data-build="bakery" data-cost="8">
+                        <div class="build-icon">🍞</div>
+                        <div class="build-name">Boulangerie</div>
+                        <div class="build-cost">💰 8 🪵</div>
+                    </div>
+                    <div class="build-card" data-build="fishery" data-cost="6">
+                        <div class="build-icon">🎣</div>
+                        <div class="build-name">Poissonnerie</div>
+                        <div class="build-cost">💰 6 🪵</div>
+                    </div>
+                    <div class="build-card" data-build="mill" data-cost="10">
+                        <div class="build-icon">⚙️</div>
+                        <div class="build-name">Moulin</div>
+                        <div class="build-cost">💰 10 🪵</div>
+                    </div>
+                    <div class="build-card" data-build="campfire" data-cost="3">
+                        <div class="build-icon">🔥</div>
+                        <div class="build-name">Feu de camp</div>
+                        <div class="build-cost">💰 3 🪵</div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 

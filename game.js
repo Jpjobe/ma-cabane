@@ -1,8 +1,16 @@
 // ========================================
 // CONFIGURATION DU JEU
 // ========================================
+
+// Calcule la taille optimale des tuiles selon l'écran
+function calculateTileSize() {
+    const minDimension = Math.min(window.innerWidth, window.innerHeight - 120);
+    const optimalSize = Math.floor(minDimension / 18); // ~18 tuiles visibles
+    return Math.max(optimalSize, 25); // Minimum 25px
+}
+
 const CONFIG = {
-    tileSize: 32,           // Taille d'une tuile en pixels
+    tileSize: calculateTileSize(), // Taille d'une tuile en pixels (calculée dynamiquement)
     worldWidth: 15,         // Largeur du monde en tuiles
     worldHeight: 15,        // Hauteur du monde en tuiles
     playerSpeed: 0.1,       // Vitesse de déplacement du joueur (0-1)
@@ -285,7 +293,10 @@ function resizeCanvas() {
     console.log('Canvas resized:', canvas.width, 'x', canvas.height);
 }
 
-window.addEventListener('resize', resizeCanvas);
+window.addEventListener('resize', () => {
+    CONFIG.tileSize = calculateTileSize();
+    resizeCanvas();
+});
 
 // ========================================
 // SAISONS ET CHARGEMENT DES SPRITES
@@ -902,7 +913,7 @@ function drawTree(tree) {
     const treeSprite = getSprite('tree');
     if (treeSprite) {
         const baseY = y + CONFIG.tileSize / 4;
-        const h = 55;
+        const h = CONFIG.tileSize * 1.7;
         const w = treeSprite.width * (h / treeSprite.height);
         ctx.drawImage(treeSprite, x - w / 2, baseY - h, w, h);
         return;
@@ -1014,7 +1025,7 @@ function drawWood(wood) {
     const woodSprite = getSprite('wood');
     if (woodSprite) {
         const baseY = y + CONFIG.tileSize / 4;
-        const h = 30;
+        const h = CONFIG.tileSize * 0.95;
         const w = woodSprite.width * (h / woodSprite.height);
         ctx.drawImage(woodSprite, x - w / 2, baseY - h, w, h);
         // Indicateur de quantité
@@ -1110,7 +1121,7 @@ function drawShelter(shelter) {
     const shelterSprite = shelter.level >= 2 ? getSprite('shelter2') : getSprite('shelter');
     if (shelterSprite) {
         const baseY = y + CONFIG.tileSize / 4;
-        const h = 70;
+        const h = CONFIG.tileSize * 2.2;
         const w = shelterSprite.width * (h / shelterSprite.height);
         ctx.drawImage(shelterSprite, x - w / 2, baseY - h, w, h);
         // Fumée animée (conservée même avec le sprite)
@@ -1604,7 +1615,7 @@ function drawMill(mill) {
     // Sprite PNG saisonnier si disponible
     const millSprite = getSprite('mill');
     if (millSprite) {
-        const h = 130;
+        const h = CONFIG.tileSize * 4.0;
         const w = millSprite.width * (h / millSprite.height);
         ctx.drawImage(millSprite, x - w / 2, gy - h, w, h);
 
@@ -1807,7 +1818,7 @@ function drawBakery(bakery) {
 
     const bakerySprite = getSprite('bakery');
     if (bakerySprite) {
-        const h = 110;
+        const h = CONFIG.tileSize * 3.4;
         const w = bakerySprite.width * (h / bakerySprite.height);
         ctx.drawImage(bakerySprite, x - w / 2, gy - h, w, h);
 
@@ -1861,7 +1872,7 @@ function drawPoissonnerie(p) {
     const pos = gridToIso(p.x, p.y);
     const x = pos.x + canvas.width / 2;
     const gy = pos.y + 100 + CONFIG.tileSize / 4;
-    const h = 110;
+    const h = CONFIG.tileSize * 3.4;
 
     const sprite = getSprite('poissonnerie');
     if (sprite) {
@@ -1958,28 +1969,29 @@ function drawCampfire(campfire) {
     const x = pos.x + ox;
     const y = pos.y + oy;
     const gy = y + CONFIG.tileSize / 4;
+    const s = CONFIG.tileSize / 32; // facteur d'échelle proportionnel
 
     // Ombre
     ctx.fillStyle = 'rgba(0,0,0,0.2)';
-    ctx.beginPath(); ctx.ellipse(x, gy + 1, 14, 5, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(x, gy + 1 * s, 14 * s, 5 * s, 0, 0, Math.PI * 2); ctx.fill();
 
     // Pierres
     ctx.fillStyle = '#808080';
     for (let i = 0; i < 6; i++) {
         const angle = (i / 6) * Math.PI * 2;
-        const rx = x + Math.cos(angle) * 9;
-        const ry = gy - 2 + Math.sin(angle) * 4;
-        ctx.beginPath(); ctx.ellipse(rx, ry, 3.5, 2.5, angle, 0, Math.PI * 2); ctx.fill();
+        const rx = x + Math.cos(angle) * 9 * s;
+        const ry = gy - 2 * s + Math.sin(angle) * 4 * s;
+        ctx.beginPath(); ctx.ellipse(rx, ry, 3.5 * s, 2.5 * s, angle, 0, Math.PI * 2); ctx.fill();
     }
 
     // Bûches
-    ctx.strokeStyle = '#6b3a1f'; ctx.lineWidth = 3; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(x - 8, gy - 2); ctx.lineTo(x + 8, gy - 6); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(x + 8, gy - 2); ctx.lineTo(x - 8, gy - 6); ctx.stroke();
+    ctx.strokeStyle = '#6b3a1f'; ctx.lineWidth = 3 * s; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(x - 8 * s, gy - 2 * s); ctx.lineTo(x + 8 * s, gy - 6 * s); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x + 8 * s, gy - 2 * s); ctx.lineTo(x - 8 * s, gy - 6 * s); ctx.stroke();
 
     // Braises
     ctx.fillStyle = 'rgba(255,80,0,0.7)';
-    ctx.beginPath(); ctx.ellipse(x, gy - 5, 7, 3, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(x, gy - 5 * s, 7 * s, 3 * s, 0, 0, Math.PI * 2); ctx.fill();
 
     // Flammes animées
     const f1 = Math.sin(frameCount * 0.15) * 0.2 + 0.8;
@@ -1988,35 +2000,35 @@ function drawCampfire(campfire) {
 
     ctx.fillStyle = `rgba(255,120,0,${0.7 * f1})`;
     ctx.beginPath();
-    ctx.moveTo(x - 8, gy - 5);
-    ctx.quadraticCurveTo(x - 4 + f1 * 2, gy - 20, x, gy - 28 * f1);
-    ctx.quadraticCurveTo(x + 4 - f1 * 2, gy - 20, x + 8, gy - 5);
+    ctx.moveTo(x - 8 * s, gy - 5 * s);
+    ctx.quadraticCurveTo(x + (-4 + f1 * 2) * s, gy - 20 * s, x, gy - 28 * f1 * s);
+    ctx.quadraticCurveTo(x + (4 - f1 * 2) * s, gy - 20 * s, x + 8 * s, gy - 5 * s);
     ctx.closePath(); ctx.fill();
 
     ctx.fillStyle = `rgba(255,185,0,${0.8 * f2})`;
     ctx.beginPath();
-    ctx.moveTo(x - 5, gy - 6);
-    ctx.quadraticCurveTo(x - 2 + f2 * 2, gy - 16, x, gy - 22 * f2);
-    ctx.quadraticCurveTo(x + 2 - f2 * 2, gy - 16, x + 5, gy - 6);
+    ctx.moveTo(x - 5 * s, gy - 6 * s);
+    ctx.quadraticCurveTo(x + (-2 + f2 * 2) * s, gy - 16 * s, x, gy - 22 * f2 * s);
+    ctx.quadraticCurveTo(x + (2 - f2 * 2) * s, gy - 16 * s, x + 5 * s, gy - 6 * s);
     ctx.closePath(); ctx.fill();
 
     ctx.fillStyle = `rgba(255,240,100,${0.9 * f3})`;
     ctx.beginPath();
-    ctx.moveTo(x - 3, gy - 6);
-    ctx.quadraticCurveTo(x + f3, gy - 12, x, gy - 16 * f3);
-    ctx.quadraticCurveTo(x - f3, gy - 12, x + 3, gy - 6);
+    ctx.moveTo(x - 3 * s, gy - 6 * s);
+    ctx.quadraticCurveTo(x + f3 * s, gy - 12 * s, x, gy - 16 * f3 * s);
+    ctx.quadraticCurveTo(x - f3 * s, gy - 12 * s, x + 3 * s, gy - 6 * s);
     ctx.closePath(); ctx.fill();
 
     // Indicateur de cuisson du poisson
     if (campfire.cookingFish) {
         const progress = campfire.cookProgress / CONFIG.fishCookDuration;
-        const barW = 36, barX = x - barW / 2, barY = gy - 42;
+        const barW = 36 * s, barX = x - barW / 2, barY = gy - 42 * s;
         ctx.fillStyle = 'rgba(0,0,0,0.5)';
-        ctx.beginPath(); ctx.roundRect(barX - 1, barY - 1, barW + 2, 7, 3); ctx.fill();
+        ctx.beginPath(); ctx.roundRect(barX - 1, barY - 1, barW + 2, 7 * s, 3); ctx.fill();
         ctx.fillStyle = '#ff8820';
-        ctx.beginPath(); ctx.roundRect(barX, barY, barW * progress, 5, 2); ctx.fill();
-        ctx.font = '10px Arial'; ctx.textAlign = 'center';
-        ctx.fillText('🐟 Cuisson...', x, barY - 4);
+        ctx.beginPath(); ctx.roundRect(barX, barY, barW * progress, 5 * s, 2); ctx.fill();
+        ctx.font = `${Math.round(10 * s)}px Arial`; ctx.textAlign = 'center';
+        ctx.fillText('🐟 Cuisson...', x, barY - 4 * s);
     }
 }
 
@@ -2211,7 +2223,7 @@ function drawPlayer() {
     const playerSprite = getSprite('player');
     if (playerSprite) {
         const baseY = y + CONFIG.tileSize / 4;
-        const h = 35;
+        const h = CONFIG.tileSize * 1.1;
         const w = playerSprite.width * (h / playerSprite.height);
         const bob = player.isMoving ? Math.abs(Math.sin(player.walkCycle)) * 1.5 : 0;
         // Miroir horizontal si le joueur se dirige vers la gauche (targetX < x)
@@ -2397,87 +2409,88 @@ function drawRabbit(rabbit) {
     const offsetY = 100;
     const x = pos.x + offsetX;
     const y = pos.y + offsetY;
+    const s = CONFIG.tileSize / 32; // facteur d'échelle proportionnel
 
     // Saut animé : monte en arc quand il se déplace
-    const hop = rabbit.isMoving ? Math.abs(Math.sin(rabbit.walkCycle)) * 5 : 0;
+    const hop = rabbit.isMoving ? Math.abs(Math.sin(rabbit.walkCycle)) * 5 * s : 0;
     const yb = y - hop; // base verticale animée
 
     const fur  = rabbit.fleeing ? '#ddd' : '#f2f2f2';
     const fur2 = rabbit.fleeing ? '#bbb' : '#d4d4d4';
 
     // Ombre (reste au sol, rétrécit quand il saute)
-    ctx.fillStyle = `rgba(0,0,0,${0.18 - hop * 0.012})`;
+    ctx.fillStyle = `rgba(0,0,0,${0.18 - hop * 0.012 / s})`;
     ctx.beginPath();
-    ctx.ellipse(x, y + 2, 7 - hop * 0.4, 3.5 - hop * 0.2, 0, 0, Math.PI * 2);
+    ctx.ellipse(x, y + 2 * s, 7 * s - hop * 0.4, 3.5 * s - hop * 0.2, 0, 0, Math.PI * 2);
     ctx.fill();
 
     // Queue
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
-    ctx.ellipse(x + 6, yb - 5, 3, 2.5, 0.3, 0, Math.PI * 2);
+    ctx.ellipse(x + 6 * s, yb - 5 * s, 3 * s, 2.5 * s, 0.3, 0, Math.PI * 2);
     ctx.fill();
 
     // Corps
     ctx.fillStyle = fur;
     ctx.beginPath();
-    ctx.ellipse(x, yb - 5, 7, 5, 0, 0, Math.PI * 2);
+    ctx.ellipse(x, yb - 5 * s, 7 * s, 5 * s, 0, 0, Math.PI * 2);
     ctx.fill();
     // Ventre (ombre sous le corps)
     ctx.fillStyle = fur2;
     ctx.beginPath();
-    ctx.ellipse(x + 1, yb - 3, 5, 2.5, 0.1, 0, Math.PI * 2);
+    ctx.ellipse(x + 1 * s, yb - 3 * s, 5 * s, 2.5 * s, 0.1, 0, Math.PI * 2);
     ctx.fill();
 
     // Patte arrière (visible sur le côté)
     ctx.fillStyle = fur2;
     ctx.beginPath();
-    ctx.ellipse(x + 5, yb - 2, 3.5, 2, 0.4, 0, Math.PI * 2);
+    ctx.ellipse(x + 5 * s, yb - 2 * s, 3.5 * s, 2 * s, 0.4, 0, Math.PI * 2);
     ctx.fill();
 
     // Oreilles (dessinées avant la tête)
     ctx.fillStyle = fur;
-    ctx.beginPath(); ctx.ellipse(x - 4, yb - 17, 2, 5.5, -0.15, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(x - 4 * s, yb - 17 * s, 2 * s, 5.5 * s, -0.15, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = '#f0a0a0';
-    ctx.beginPath(); ctx.ellipse(x - 4, yb - 17, 1, 4,   -0.15, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(x - 4 * s, yb - 17 * s, 1 * s, 4 * s,   -0.15, 0, Math.PI * 2); ctx.fill();
 
     ctx.fillStyle = fur;
-    ctx.beginPath(); ctx.ellipse(x - 1, yb - 17, 2, 5.5,  0.15, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(x - 1 * s, yb - 17 * s, 2 * s, 5.5 * s,  0.15, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = '#f0a0a0';
-    ctx.beginPath(); ctx.ellipse(x - 1, yb - 17, 1, 4,    0.15, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(x - 1 * s, yb - 17 * s, 1 * s, 4 * s,    0.15, 0, Math.PI * 2); ctx.fill();
 
     // Tête
     ctx.fillStyle = fur;
     ctx.beginPath();
-    ctx.arc(x - 3, yb - 10, 4.5, 0, Math.PI * 2);
+    ctx.arc(x - 3 * s, yb - 10 * s, 4.5 * s, 0, Math.PI * 2);
     ctx.fill();
 
     // Museau
     ctx.fillStyle = fur2;
     ctx.beginPath();
-    ctx.ellipse(x - 6, yb - 9, 2, 1.5, 0, 0, Math.PI * 2);
+    ctx.ellipse(x - 6 * s, yb - 9 * s, 2 * s, 1.5 * s, 0, 0, Math.PI * 2);
     ctx.fill();
 
     // Nez rose
     ctx.fillStyle = '#f08080';
     ctx.beginPath();
-    ctx.arc(x - 7, yb - 9.5, 1, 0, Math.PI * 2);
+    ctx.arc(x - 7 * s, yb - 9.5 * s, 1 * s, 0, Math.PI * 2);
     ctx.fill();
 
     // Œil avec reflet
     ctx.fillStyle = '#222';
     ctx.beginPath();
-    ctx.arc(x - 4, yb - 11.5, 1.2, 0, Math.PI * 2);
+    ctx.arc(x - 4 * s, yb - 11.5 * s, 1.2 * s, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = 'rgba(255,255,255,0.7)';
     ctx.beginPath();
-    ctx.arc(x - 3.5, yb - 12, 0.5, 0, Math.PI * 2);
+    ctx.arc(x - 3.5 * s, yb - 12 * s, 0.5 * s, 0, Math.PI * 2);
     ctx.fill();
 
     // Exclamation si fuite
     if (rabbit.fleeing) {
         ctx.fillStyle = '#ff3333';
-        ctx.font = 'bold 10px Arial';
-        ctx.fillText('!', x - 1, yb - 23);
+        ctx.font = `bold ${Math.round(10 * s)}px Arial`;
+        ctx.fillText('!', x - 1 * s, yb - 23 * s);
     }
 }
 
@@ -3205,7 +3218,7 @@ function drawHabitant(h) {
     // Sprite PNG si disponible
     const sprite = habitantSprites[h.gender];
     if (sprite) {
-        const hSprite = 64;
+        const hSprite = CONFIG.tileSize * 2.0;
         const wSprite = sprite.width * (hSprite / sprite.height);
         const facingLeft = h.targetX < h.x - 0.1;
         ctx.save();
@@ -4333,24 +4346,18 @@ function updateBuildButton() {
 // DÉMARRAGE DU JEU
 // ========================================
 
-// Gestion du bouton de construction
+// Gestion du bouton de construction (ancien — remplacé par le popup)
 const buildBtn = document.getElementById('buildBtn');
-buildBtn.addEventListener('click', () => {
+if (buildBtn) buildBtn.addEventListener('click', () => {
     if (player.wood >= SHELTER_COST) {
         buildMode = !buildMode;
         updateBuildButton();
-        
-        if (buildMode) {
-            console.log('🏗️ Mode construction activé ! Clique sur la carte pour placer ton abri.');
-        } else {
-            console.log('❌ Mode construction annulé.');
-        }
     }
 });
 
-// Gestion du bouton de plantation
+// Gestion du bouton de plantation (ancien — remplacé par le popup)
 const fieldBtn = document.getElementById('fieldBtn');
-fieldBtn.addEventListener('click', () => {
+if (fieldBtn) fieldBtn.addEventListener('click', () => {
     if (player.wood >= CONFIG.fieldCost) {
         buildFieldMode = !buildFieldMode;
         deactivateAllModes('field');
@@ -4358,9 +4365,9 @@ fieldBtn.addEventListener('click', () => {
     }
 });
 
-// Gestion du bouton de palissade
+// Gestion du bouton de palissade (ancien — remplacé par le popup)
 const palisadeBtn = document.getElementById('palisadeBtn');
-palisadeBtn.addEventListener('click', () => {
+if (palisadeBtn) palisadeBtn.addEventListener('click', () => {
     if (player.wood >= CONFIG.palisadeCost) {
         buildPalisadeMode = !buildPalisadeMode;
         deactivateAllModes('palisade');
@@ -4396,9 +4403,9 @@ function deactivateAllModes(except) {
     if (except !== 'demolish')     { demolishMode           = false; updateDemolishButton();       }
 }
 
-// Gestion du bouton de pont
+// Gestion du bouton de pont (ancien — remplacé par le popup)
 const bridgeBtn = document.getElementById('bridgeBtn');
-bridgeBtn.addEventListener('click', () => {
+if (bridgeBtn) bridgeBtn.addEventListener('click', () => {
     if (player.wood >= CONFIG.bridgeCost) {
         buildBridgeMode = !buildBridgeMode;
         deactivateAllModes('bridge');
@@ -4406,9 +4413,9 @@ bridgeBtn.addEventListener('click', () => {
     }
 });
 
-// Gestion du bouton de moulin
+// Gestion du bouton de moulin (ancien — remplacé par le popup)
 const millBtn = document.getElementById('millBtn');
-millBtn.addEventListener('click', () => {
+if (millBtn) millBtn.addEventListener('click', () => {
     if (player.wood >= CONFIG.millCostWood && player.wheat >= CONFIG.millCostWheat) {
         buildMillMode = !buildMillMode;
         deactivateAllModes('mill');
@@ -4416,9 +4423,9 @@ millBtn.addEventListener('click', () => {
     }
 });
 
-// Gestion du bouton de boulangerie
+// Gestion du bouton de boulangerie (ancien — remplacé par le popup)
 const bakeryBtn = document.getElementById('bakeryBtn');
-bakeryBtn.addEventListener('click', () => {
+if (bakeryBtn) bakeryBtn.addEventListener('click', () => {
     if (player.wood >= CONFIG.bakeryCostWood) {
         buildBakeryMode = !buildBakeryMode;
         deactivateAllModes('bakery');
@@ -4426,9 +4433,9 @@ bakeryBtn.addEventListener('click', () => {
     }
 });
 
-// Gestion du bouton de feu de camp
+// Gestion du bouton de feu de camp (ancien — remplacé par le popup)
 const campfireBtn = document.getElementById('campfireBtn');
-campfireBtn.addEventListener('click', () => {
+if (campfireBtn) campfireBtn.addEventListener('click', () => {
     if (player.wood >= CONFIG.campfireCost) {
         buildCampfireMode = !buildCampfireMode;
         deactivateAllModes('campfire');
@@ -4481,6 +4488,99 @@ demolishBtn.addEventListener('click', () => {
     demolishMode = !demolishMode;
     deactivateAllModes('demolish');
     updateDemolishButton();
+});
+
+// ========================================
+// SYSTÈME DE POPUP DE CONSTRUCTION
+// ========================================
+
+const buildPopup    = document.getElementById('buildPopup');
+const buildMenuBtn  = document.getElementById('buildMenuBtn');
+const closePopupBtn = document.getElementById('closePopupBtn');
+const buildCards    = document.querySelectorAll('.build-card');
+const popupOverlay  = document.querySelector('.popup-overlay');
+
+// Ouvrir le popup
+buildMenuBtn.addEventListener('click', () => {
+    buildPopup.classList.remove('hidden');
+    updateBuildCards();
+});
+
+// Fermer le popup (bouton ✖)
+closePopupBtn.addEventListener('click', () => {
+    buildPopup.classList.add('hidden');
+});
+
+// Fermer le popup (clic sur l'overlay sombre)
+popupOverlay.addEventListener('click', () => {
+    buildPopup.classList.add('hidden');
+});
+
+// Griser les cartes si pas assez de ressources
+function updateBuildCards() {
+    buildCards.forEach(card => {
+        const cost = parseInt(card.dataset.cost);
+        if (player.wood < cost) {
+            card.classList.add('disabled');
+        } else {
+            card.classList.remove('disabled');
+        }
+    });
+}
+
+// Sélection d'une construction dans le popup
+buildCards.forEach(card => {
+    card.addEventListener('click', () => {
+        const buildType = card.dataset.build;
+        const cost      = parseInt(card.dataset.cost);
+
+        if (player.wood < cost) {
+            spawnPopup('❌ Pas assez de bois !', player.x, player.y);
+            return;
+        }
+
+        buildPopup.classList.add('hidden');
+        deactivateAllModes('__none__');
+
+        switch (buildType) {
+            case 'shelter':
+                buildMode = true;
+                updateBuildButton();
+                break;
+            case 'field':
+                buildFieldMode = true;
+                updateFieldButton();
+                break;
+            case 'fence':
+                buildPalisadeMode = true;
+                updatePalisadeButton();
+                break;
+            case 'bridge':
+                buildBridgeMode = true;
+                updateBridgeButton();
+                break;
+            case 'bakery':
+                buildBakeryMode = true;
+                updateBakeryButton();
+                break;
+            case 'fishery':
+                buildPoissonnierieMode = true;
+                updatePoissonnierieButton();
+                break;
+            case 'mill':
+                if (player.wheat < CONFIG.millCostWheat) {
+                    spawnPopup(`❌ Il faut aussi ${CONFIG.millCostWheat} 🌾 !`, player.x, player.y);
+                    return;
+                }
+                buildMillMode = true;
+                updateMillButton();
+                break;
+            case 'campfire':
+                buildCampfireMode = true;
+                updateCampfireButton();
+                break;
+        }
+    });
 });
 
 updatePositionDisplay();
