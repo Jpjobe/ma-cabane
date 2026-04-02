@@ -1615,7 +1615,7 @@ function drawMill(mill) {
     // Sprite PNG saisonnier si disponible
     const millSprite = getSprite('mill');
     if (millSprite) {
-        const h = CONFIG.tileSize * 4.0;
+        const h = CONFIG.tileSize * 2.5; // plus grand que la cabane, mais pas excessif
         const w = millSprite.width * (h / millSprite.height);
         ctx.drawImage(millSprite, x - w / 2, gy - h, w, h);
 
@@ -1818,7 +1818,7 @@ function drawBakery(bakery) {
 
     const bakerySprite = getSprite('bakery');
     if (bakerySprite) {
-        const h = CONFIG.tileSize * 3.4;
+        const h = CONFIG.tileSize * 2.0;
         const w = bakerySprite.width * (h / bakerySprite.height);
         ctx.drawImage(bakerySprite, x - w / 2, gy - h, w, h);
 
@@ -1872,7 +1872,7 @@ function drawPoissonnerie(p) {
     const pos = gridToIso(p.x, p.y);
     const x = pos.x + canvas.width / 2;
     const gy = pos.y + 100 + CONFIG.tileSize / 4;
-    const h = CONFIG.tileSize * 3.4;
+    const h = CONFIG.tileSize * 2.0;
 
     const sprite = getSprite('poissonnerie');
     if (sprite) {
@@ -3218,7 +3218,7 @@ function drawHabitant(h) {
     // Sprite PNG si disponible
     const sprite = habitantSprites[h.gender];
     if (sprite) {
-        const hSprite = CONFIG.tileSize * 2.0;
+        const hSprite = CONFIG.tileSize * 1.1; // même taille que le joueur
         const wSprite = sprite.width * (hSprite / sprite.height);
         const facingLeft = h.targetX < h.x - 0.1;
         ctx.save();
