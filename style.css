@@ -103,6 +103,37 @@ h1 {
 }
 .header-metas::-webkit-scrollbar { display: none; }
 
+/* Contrôles de zoom dans le header */
+.zoom-controls {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.25);
+    padding: 2px 6px;
+    border-radius: 12px;
+    flex-shrink: 0;
+}
+
+.zoom-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 0.75em;
+    padding: 0 2px;
+    line-height: 1;
+    color: white;
+    touch-action: manipulation;
+}
+
+#zoomLevel {
+    font-size: 0.7em;
+    font-weight: bold;
+    color: var(--snow-white);
+    min-width: 36px;
+    text-align: center;
+}
+
 .meta-chip {
     background: rgba(255,255,255,0.18);
     border: 1px solid rgba(255,255,255,0.2);

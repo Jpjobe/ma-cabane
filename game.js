@@ -267,7 +267,12 @@ const ctx = canvas.getContext('2d');
 // Zoom appliqué au rendu (calculé selon la taille du canvas)
 let currentZoom = 1;
 
-// Calcule le zoom pour que toute la carte isométrique rentre à l'écran
+// Variables de zoom manuel (pinch-to-zoom)
+let isPinching = false;
+let lastPinchDistance = 0;
+
+// Calcule le zoom optimal pour que toute la carte isométrique remplisse l'écran
+// Sur tablette/desktop : zoom > 1 pour agrandir, sur mobile : ~1
 function calculateZoom() {
     if (canvas.width === 0 || canvas.height === 0) return 1;
     // Étendue horizontale de la carte en pixels isométriques
@@ -276,8 +281,8 @@ function calculateZoom() {
     const isoWorldHeight = (CONFIG.worldWidth + CONFIG.worldHeight) * (CONFIG.tileSize / 4) + 120;
     const zoomX = canvas.width  / isoWorldWidth;
     const zoomY = canvas.height / isoWorldHeight;
-    // On prend le plus petit des deux, avec un max de 1 (pas de zoom avant)
-    return Math.min(zoomX, zoomY, 1);
+    // On prend le plus petit pour que tout rentre, limité entre 0.5 et 3
+    return Math.max(0.5, Math.min(3, Math.min(zoomX, zoomY)));
 }
 
 function resizeCanvas() {
@@ -290,7 +295,11 @@ function resizeCanvas() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight - headerHeight - footerHeight - 10;
 
-    console.log('Canvas resized:', canvas.width, 'x', canvas.height);
+    // Appliquer le zoom optimal au redimensionnement
+    currentZoom = calculateZoom();
+    updateZoomDisplay();
+
+    console.log('Canvas resized:', canvas.width, 'x', canvas.height, '— Zoom:', currentZoom.toFixed(2));
 }
 
 window.addEventListener('resize', () => {
@@ -3808,12 +3817,27 @@ function gameLoop() {
 // SUPPORT TACTILE (mobile / tablette)
 // ========================================
 
-// Convertit un événement touch en clic simulé sur le canvas
-// Cela permet d'utiliser le même gestionnaire de clic pour souris et doigt
+// ========================================
+// SUPPORT TACTILE — clic + pinch-to-zoom
+// ========================================
+
+// Distance entre deux doigts (utilisée par le pinch-to-zoom)
+function getPinchDistance(touches) {
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+}
+
+// Touch start : 1 doigt → clic simulé | 2 doigts → début pinch
 canvas.addEventListener('touchstart', (e) => {
-    e.preventDefault(); // empêche le scroll et le zoom de la page
+    e.preventDefault();
+    if (e.touches.length === 2) {
+        isPinching = true;
+        lastPinchDistance = getPinchDistance(e.touches);
+        return;
+    }
+    // Un seul doigt : convertit en clic simulé
     const touch = e.changedTouches[0];
-    // Créer un MouseEvent synthétique avec les coordonnées du doigt
     const simulatedClick = new MouseEvent('click', {
         bubbles: true,
         cancelable: true,
@@ -3821,12 +3845,28 @@ canvas.addEventListener('touchstart', (e) => {
         clientY: touch.clientY
     });
     canvas.dispatchEvent(simulatedClick);
-}, { passive: false }); // passive:false nécessaire pour que preventDefault() fonctionne
+}, { passive: false });
 
-// Empêche le scroll élastique sur iOS quand on glisse sur le canvas
+// Touch move : pinch → ajuste le zoom | sinon → empêche scroll iOS
 canvas.addEventListener('touchmove', (e) => {
     e.preventDefault();
+    if (isPinching && e.touches.length === 2) {
+        const currentDistance = getPinchDistance(e.touches);
+        const delta = currentDistance - lastPinchDistance;
+        // Sensibilité : 0.002 (ajustement progressif)
+        currentZoom += delta * 0.002;
+        currentZoom = Math.max(0.5, Math.min(3, currentZoom));
+        lastPinchDistance = currentDistance;
+        updateZoomDisplay();
+    }
 }, { passive: false });
+
+// Touch end : fin du pinch quand un doigt se lève
+canvas.addEventListener('touchend', (e) => {
+    if (e.touches.length < 2) {
+        isPinching = false;
+    }
+});
 
 // ========================================
 // GESTION DES CLICS
@@ -4658,6 +4698,28 @@ updateTowerButton();
         loadSprites().then(() => gameLoop());
     }
 })();
+
+// ========================================
+// BOUTONS DE ZOOM +/-
+// ========================================
+
+// Affiche le niveau de zoom actuel dans le header
+function updateZoomDisplay() {
+    const el = document.getElementById('zoomLevel');
+    if (el) el.textContent = Math.round(currentZoom * 100) + '%';
+}
+
+// Bouton zoom avant (+)
+document.getElementById('zoomInBtn')?.addEventListener('click', () => {
+    currentZoom = Math.min(3, currentZoom + 0.2);
+    updateZoomDisplay();
+});
+
+// Bouton zoom arrière (-)
+document.getElementById('zoomOutBtn')?.addEventListener('click', () => {
+    currentZoom = Math.max(0.5, currentZoom - 0.2);
+    updateZoomDisplay();
+});
 
 console.log('🎮 Jeu chargé avec succès !');
 console.log('👆 Clique sur la carte pour déplacer ton personnage');
