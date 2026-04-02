@@ -4721,6 +4721,139 @@ document.getElementById('zoomOutBtn')?.addEventListener('click', () => {
     updateZoomDisplay();
 });
 
+// ========================================
+// BOUTON NOUVELLE PARTIE
+// ========================================
+
+// Ouvre le popup de confirmation avec la progression actuelle
+function startNewGame() {
+    const popup = document.getElementById('confirmPopup');
+    const progressList = document.getElementById('progressList');
+    if (!popup || !progressList) return;
+
+    progressList.innerHTML =
+        `<li>${player.wood} bois • ${player.stone} pierre</li>` +
+        `<li>${shelters.length} abri(s) construit(s)</li>` +
+        `<li>${fields.length} champ(s) • ${mills.length} moulin(s)</li>` +
+        `<li>${palisades.length} segment(s) de palissade</li>`;
+
+    popup.classList.remove('hidden');
+}
+
+// Réinitialise complètement l'état du jeu (appelé après confirmation)
+function executeNewGame() {
+    // Fermer le popup
+    document.getElementById('confirmPopup')?.classList.add('hidden');
+
+    // --- Joueur ---
+    player.x = Math.floor(CONFIG.worldWidth / 2);
+    player.y = Math.floor(CONFIG.worldHeight / 2);
+    player.targetX = player.x;
+    player.targetY = player.y;
+    player.wood = 0;  player.stone = 0;  player.wheat = 0;
+    player.flour = 0; player.fish = 0;   player.cookedFish = 0;
+    player.bread = 0; player.hunger = 100; player.cold = 100;
+    player.fishingTimer = 0;  player.fishingCooldown = 0;
+    player.cuttingTarget = null; player.isMoving = false;
+
+    // --- Vider toutes les structures ---
+    [shelters, fields, palisades, mills, bakeries, poissonneries,
+     campfires, bridges, towers, habitants, wolves, popups].forEach(arr => arr.length = 0);
+
+    // --- Désactiver tous les modes de construction ---
+    buildMode = false; buildFieldMode = false; buildPalisadeMode = false;
+    buildMillMode = false; buildBakeryMode = false; buildPoissonnierieMode = false;
+    buildCampfireMode = false; buildBridgeMode = false; buildTowerMode = false;
+    demolishMode = false;
+
+    // --- Timers et état global ---
+    gameOver = false;
+    wolfSpawnTimer = CONFIG.wolfSpawnInterval;
+    frameCount = 0;
+    currentSeasonIndex = 0;
+    seasonTimer = 0;
+    seasonTransitionAlpha = 0;
+
+    // --- Régénérer les arbres ---
+    trees.length = 0;
+    for (let i = 0; i < 15; i++) {
+        trees.push({
+            x: Math.floor(Math.random() * CONFIG.worldWidth),
+            y: Math.floor(Math.random() * CONFIG.worldHeight),
+            type: Math.random() > 0.5 ? 'pine' : 'dead',
+            chopped: false, cuttingProgress: 0, regrowTimer: 0
+        });
+    }
+
+    // --- Régénérer les piles de bois ---
+    woodPiles.length = 0;
+    for (let i = 0; i < 10; i++) {
+        woodPiles.push({
+            x: Math.floor(Math.random() * CONFIG.worldWidth),
+            y: Math.floor(Math.random() * CONFIG.worldHeight),
+            amount: Math.floor(Math.random() * 3) + 1
+        });
+    }
+
+    // --- Régénérer le rocher (loin du centre) ---
+    stonePiles.length = 0;
+    let srx, sry;
+    do {
+        srx = 2 + Math.floor(Math.random() * (CONFIG.worldWidth  - 4));
+        sry = 2 + Math.floor(Math.random() * (CONFIG.worldHeight - 4));
+    } while (Math.abs(srx - 10) < 4 && Math.abs(sry - 10) < 4);
+    stonePiles.push({ x: srx, y: sry, collectCooldown: 0 });
+
+    // --- Régénérer les lapins ---
+    rabbits.length = 0;
+    for (let i = 0; i < 5; i++) {
+        const lx = 2 + Math.floor(Math.random() * (CONFIG.worldWidth - 4));
+        const ly = 2 + Math.floor(Math.random() * (CONFIG.worldHeight - 4));
+        rabbits.push({ x: lx, y: ly, targetX: lx, targetY: ly,
+            walkCycle: Math.random() * Math.PI * 2,
+            isMoving: false, waitTimer: Math.floor(Math.random() * 120), fleeing: false });
+    }
+
+    // --- Régénérer la rivière ---
+    riverTiles = [];
+    riverTileSet = new Set();
+    generateRiver();
+
+    // --- Mettre à jour l'interface ---
+    updateSeasonDisplay();
+    updateHabitantDisplay();
+    updateDemolishButton();
+
+    showTemporaryMessage('🎮 Nouvelle partie commencée ! Bonne chance !');
+    console.log('✅ Nouvelle partie initialisée !');
+}
+
+// Affiche un message vert temporaire au centre de l'écran
+function showTemporaryMessage(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    div.style.cssText = [
+        'position:fixed', 'top:50%', 'left:50%',
+        'transform:translate(-50%,-50%)',
+        'background:linear-gradient(135deg,#4caf50,#66bb6a)',
+        'color:white', 'padding:20px 40px', 'border-radius:15px',
+        'font-size:1.2em', 'font-weight:bold',
+        'box-shadow:0 10px 40px rgba(0,0,0,0.5)',
+        "font-family:'Cabin',sans-serif",
+        'z-index:6000', 'pointer-events:none',
+        'animation:fadeInOut 2s forwards'
+    ].join(';');
+    document.body.appendChild(div);
+    setTimeout(() => div.remove(), 2000);
+}
+
+// Event listeners du popup et du bouton
+document.getElementById('newGameBtn')?.addEventListener('click', startNewGame);
+document.getElementById('confirmYes')?.addEventListener('click', executeNewGame);
+document.getElementById('confirmNo')?.addEventListener('click', () => {
+    document.getElementById('confirmPopup')?.classList.add('hidden');
+});
+
 console.log('🎮 Jeu chargé avec succès !');
 console.log('👆 Clique sur la carte pour déplacer ton personnage');
 console.log('🪵 Approche-toi des piles de bois pour les ramasser !');

@@ -35,9 +35,12 @@
         <!-- ══════════ HEADER COMPACT ══════════ -->
         <div class="header">
 
-            <!-- Ligne 1 : titre + saison + position -->
+            <!-- Ligne 1 : titre + bouton nouvelle partie + saison + position -->
             <div class="header-row header-row-top">
-                <h1>MA CABANE</h1>
+                <div class="title-section">
+                    <h1>MA CABANE</h1>
+                    <button id="newGameBtn" class="new-game-btn" title="Nouvelle partie">🔄 Recommencer</button>
+                </div>
                 <div class="header-metas">
                     <div class="meta-chip season-chip"><span id="season">🌸 Printemps</span></div>
                     <div class="meta-chip"><span class="meta-icon">📍</span><span id="position">0,0</span></div>
@@ -165,6 +168,21 @@
                         <div class="build-cost">💰 8 🪵 + 5 🪨</div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Popup de confirmation nouvelle partie -->
+    <div id="confirmPopup" class="confirm-popup hidden">
+        <div class="popup-overlay"></div>
+        <div class="confirm-content">
+            <h2>🔄 Nouvelle partie ?</h2>
+            <p>Toute ta progression sera perdue :</p>
+            <ul id="progressList"></ul>
+            <p><strong>Es-tu sûr de vouloir recommencer ?</strong></p>
+            <div class="confirm-buttons">
+                <button id="confirmYes" class="confirm-btn yes">✅ Oui, recommencer</button>
+                <button id="confirmNo" class="confirm-btn no">❌ Annuler</button>
             </div>
         </div>
     </div>
