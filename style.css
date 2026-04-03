@@ -599,6 +599,27 @@ h1 {
 .confirm-btn.yes { background: linear-gradient(135deg, #4caf50, #66bb6a); color: white; }
 .confirm-btn.no  { background: linear-gradient(135deg, #757575, #9e9e9e); color: white; }
 
+/* ══════════ BOUTON RECENTRER (caméra) ══════════ */
+.recenter-btn {
+    position: fixed;
+    bottom: 80px;
+    right: 15px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #4caf50, #66bb6a);
+    color: white;
+    border: none;
+    font-size: 1.5em;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    z-index: 1000;
+    transition: all 0.2s;
+    touch-action: manipulation;
+}
+.recenter-btn:hover  { transform: scale(1.1); box-shadow: 0 6px 20px rgba(0,0,0,0.4); }
+.recenter-btn:active { transform: scale(0.9); }
+
 /* Animation du message temporaire "Nouvelle partie commencée" */
 @keyframes fadeInOut {
     0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }

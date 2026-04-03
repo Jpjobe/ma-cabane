@@ -11,8 +11,8 @@ function calculateTileSize() {
 
 const CONFIG = {
     tileSize: calculateTileSize(), // Taille d'une tuile en pixels (calculée dynamiquement)
-    worldWidth: 15,         // Largeur du monde en tuiles
-    worldHeight: 15,        // Hauteur du monde en tuiles
+    worldWidth: 40,         // Largeur du monde en tuiles
+    worldHeight: 40,        // Hauteur du monde en tuiles
     playerSpeed: 0.1,       // Vitesse de déplacement du joueur (0-1)
     woodPerTree: 3,         // Bois obtenu en coupant un sapin
     treeCutDuration: 80,    // Frames pour couper un arbre (~1.3s à 60fps)
@@ -271,18 +271,42 @@ let currentZoom = 1;
 let isPinching = false;
 let lastPinchDistance = 0;
 
-// Calcule le zoom optimal pour que toute la carte isométrique remplisse l'écran
-// Sur tablette/desktop : zoom > 1 pour agrandir, sur mobile : ~1
+// ========================================
+// SYSTÈME DE CAMÉRA
+// ========================================
+
+let camera = {
+    x: 0,          // Position X courante de la caméra (en pixels écran)
+    y: 0,          // Position Y courante
+    targetX: 0,    // Cible du déplacement (smooth scroll)
+    targetY: 0,
+    smoothing: 0.15 // Vitesse de lissage (0.1 = doux, 1 = instantané)
+};
+
+// Limites de déplacement (calculées selon la taille du monde et le zoom)
+let worldBounds = { minX: 0, maxX: 0, minY: 0, maxY: 0 };
+
+// État du pan (glissement pour déplacer la caméra)
+let isPanning    = false;
+let lastPanX     = 0;
+let lastPanY     = 0;
+let touchStartX  = 0;
+let touchStartY  = 0;
+let hasPanned    = false;
+const PAN_THRESHOLD = 8; // Pixels minimum avant de considérer un glissement
+
+// Calcule le zoom initial confortable selon la taille du monde
+// Pour un grand monde (40x40) : ~12 tuiles visibles en largeur
 function calculateZoom() {
     if (canvas.width === 0 || canvas.height === 0) return 1;
-    // Étendue horizontale de la carte en pixels isométriques
     const isoWorldWidth  = (CONFIG.worldWidth + CONFIG.worldHeight) * (CONFIG.tileSize / 2);
-    // Étendue verticale (hauteur Y iso + décalage haut)
     const isoWorldHeight = (CONFIG.worldWidth + CONFIG.worldHeight) * (CONFIG.tileSize / 4) + 120;
-    const zoomX = canvas.width  / isoWorldWidth;
-    const zoomY = canvas.height / isoWorldHeight;
-    // On prend le plus petit pour que tout rentre, limité entre 0.5 et 3
-    return Math.max(0.5, Math.min(3, Math.min(zoomX, zoomY)));
+    const naturalZoom = Math.min(canvas.width / isoWorldWidth, canvas.height / isoWorldHeight);
+    // Grand monde explorable : le monde ne tient pas sur l'écran → zoom confortable fixe
+    if (naturalZoom < 0.8) {
+        return Math.max(0.5, Math.min(1.5, canvas.width / (CONFIG.tileSize * 12)));
+    }
+    return Math.max(0.5, Math.min(3, naturalZoom));
 }
 
 function resizeCanvas() {
@@ -298,6 +322,7 @@ function resizeCanvas() {
     // Appliquer le zoom optimal au redimensionnement
     currentZoom = calculateZoom();
     updateZoomDisplay();
+    calculateWorldBounds(); // Recalculer les limites de déplacement
 
     console.log('Canvas resized:', canvas.width, 'x', canvas.height, '— Zoom:', currentZoom.toFixed(2));
 }
@@ -306,6 +331,28 @@ window.addEventListener('resize', () => {
     CONFIG.tileSize = calculateTileSize();
     resizeCanvas();
 });
+
+// Calcule les limites max de déplacement de la caméra
+// (empêche de scroller dans le vide au-delà du monde)
+function calculateWorldBounds() {
+    const isoSpanX = (CONFIG.worldWidth + CONFIG.worldHeight) * (CONFIG.tileSize / 2);
+    const isoSpanY = (CONFIG.worldWidth + CONFIG.worldHeight) * (CONFIG.tileSize / 4);
+    worldBounds.minX = -isoSpanX * currentZoom;
+    worldBounds.maxX =  isoSpanX * currentZoom;
+    worldBounds.minY = -isoSpanY * currentZoom;
+    worldBounds.maxY =  isoSpanY * currentZoom;
+}
+
+// Centre la caméra sur le joueur (appelé au démarrage et après "nouvelle partie")
+function centerCameraOnPlayer() {
+    const pos  = gridToIso(player.x, player.y);
+    const worldX = pos.x + canvas.width / 2;
+    const worldY = pos.y + 100;
+    camera.targetX = (canvas.width  / 2 - worldX) * currentZoom;
+    camera.targetY =  canvas.height / 2 - worldY  * currentZoom;
+    camera.x = camera.targetX;
+    camera.y = camera.targetY;
+}
 
 // ========================================
 // SAISONS ET CHARGEMENT DES SPRITES
@@ -487,11 +534,11 @@ function gridToIso(gridX, gridY) {
 }
 
 // Convertit des coordonnées d'écran en coordonnées de grille
-// Tient compte du zoom appliqué au rendu.
+// Tient compte du zoom et de la position de la caméra.
 function isoToGrid(screenX, screenY) {
-    // Annuler la translation (centrage horizontal avec zoom)
-    const logicalX = (screenX - canvas.width / 2 * (1 - currentZoom)) / currentZoom;
-    const logicalY = screenY / currentZoom;
+    // Annuler la translation (zoom + décalage caméra)
+    const logicalX = (screenX - canvas.width / 2 * (1 - currentZoom) - camera.x) / currentZoom;
+    const logicalY = (screenY - camera.y) / currentZoom;
 
     const offsetX = canvas.width / 2;
     const offsetY = 100;
@@ -3646,10 +3693,14 @@ function gameLoop() {
     // Effacer le canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    // Mise à jour fluide de la caméra (smooth scroll)
+    camera.x += (camera.targetX - camera.x) * camera.smoothing;
+    camera.y += (camera.targetY - camera.y) * camera.smoothing;
+
     // Si game over : afficher l'écran et arrêter la logique
     if (gameOver) {
         ctx.save();
-        ctx.translate(canvas.width / 2 * (1 - currentZoom), 0);
+        ctx.translate(canvas.width / 2 * (1 - currentZoom) + camera.x, camera.y);
         ctx.scale(currentZoom, currentZoom);
         drawGround();
         ctx.restore();
@@ -3742,9 +3793,9 @@ function gameLoop() {
     // Mettre à jour la saison
     updateSeason();
 
-    // ── RENDU ZOOMÉ : tout ce qui est ancré dans la grille ──
+    // ── RENDU ZOOMÉ + CAMÉRA : tout ce qui est ancré dans la grille ──
     ctx.save();
-    ctx.translate(canvas.width / 2 * (1 - currentZoom), 0);
+    ctx.translate(canvas.width / 2 * (1 - currentZoom) + camera.x, camera.y);
     ctx.scale(currentZoom, currentZoom);
 
     drawGround();
@@ -3828,45 +3879,120 @@ function getPinchDistance(touches) {
     return Math.sqrt(dx * dx + dy * dy);
 }
 
-// Touch start : 1 doigt → clic simulé | 2 doigts → début pinch
+// ========================================
+// TACTILE : tap court = clic joueur | glissement = pan caméra | 2 doigts = zoom+pan
+// ========================================
+
+// Touch start : mémoriser la position de départ
 canvas.addEventListener('touchstart', (e) => {
     e.preventDefault();
     if (e.touches.length === 2) {
+        // Deux doigts : pinch-to-zoom + pan
         isPinching = true;
+        isPanning  = true;
         lastPinchDistance = getPinchDistance(e.touches);
+        lastPanX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        lastPanY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
         return;
     }
-    // Un seul doigt : convertit en clic simulé
-    const touch = e.changedTouches[0];
-    const simulatedClick = new MouseEvent('click', {
-        bubbles: true,
-        cancelable: true,
-        clientX: touch.clientX,
-        clientY: touch.clientY
-    });
-    canvas.dispatchEvent(simulatedClick);
+    // Un seul doigt : peut être tap ou glissement
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+    lastPanX    = touchStartX;
+    lastPanY    = touchStartY;
+    hasPanned   = false;
+    isPanning   = false;
 }, { passive: false });
 
-// Touch move : pinch → ajuste le zoom | sinon → empêche scroll iOS
+// Touch move : si glissement → pan caméra | 2 doigts → zoom + pan
 canvas.addEventListener('touchmove', (e) => {
     e.preventDefault();
+
+    // Pinch-to-zoom (deux doigts)
     if (isPinching && e.touches.length === 2) {
-        const currentDistance = getPinchDistance(e.touches);
-        const delta = currentDistance - lastPinchDistance;
-        // Sensibilité : 0.002 (ajustement progressif)
+        const dist  = getPinchDistance(e.touches);
+        const delta = dist - lastPinchDistance;
         currentZoom += delta * 0.002;
         currentZoom = Math.max(0.5, Math.min(3, currentZoom));
-        lastPinchDistance = currentDistance;
+        lastPinchDistance = dist;
         updateZoomDisplay();
+        calculateWorldBounds();
     }
+
+    // Position centrale des doigts (1 ou 2)
+    const curX = e.touches.length >= 2
+        ? (e.touches[0].clientX + e.touches[1].clientX) / 2
+        : e.touches[0].clientX;
+    const curY = e.touches.length >= 2
+        ? (e.touches[0].clientY + e.touches[1].clientY) / 2
+        : e.touches[0].clientY;
+
+    // Détecter si c'est un glissement (1 doigt)
+    if (e.touches.length === 1 && !hasPanned) {
+        const dist = Math.sqrt((curX - touchStartX) ** 2 + (curY - touchStartY) ** 2);
+        if (dist > PAN_THRESHOLD) {
+            hasPanned = true;
+            isPanning = true;
+        }
+    }
+
+    // Déplacer la caméra
+    if (isPanning || e.touches.length === 2) {
+        const dx = curX - lastPanX;
+        const dy = curY - lastPanY;
+        camera.targetX = Math.max(worldBounds.minX, Math.min(worldBounds.maxX, camera.targetX + dx));
+        camera.targetY = Math.max(worldBounds.minY, Math.min(worldBounds.maxY, camera.targetY + dy));
+    }
+
+    lastPanX = curX;
+    lastPanY = curY;
 }, { passive: false });
 
-// Touch end : fin du pinch quand un doigt se lève
+// Touch end : si pas de glissement → simuler un clic (déplacement joueur)
 canvas.addEventListener('touchend', (e) => {
-    if (e.touches.length < 2) {
-        isPinching = false;
+    if (e.touches.length < 2) isPinching = false;
+    if (e.touches.length === 0) {
+        isPanning = false;
+        if (!hasPanned) {
+            // Tap court = clic pour déplacer le joueur
+            const simulatedClick = new MouseEvent('click', {
+                bubbles: true, cancelable: true,
+                clientX: touchStartX, clientY: touchStartY
+            });
+            canvas.dispatchEvent(simulatedClick);
+        }
+        hasPanned = false;
     }
 });
+
+// ========================================
+// SOURIS : clic droit ou Ctrl+clic → pan caméra (pour tester sur PC)
+// ========================================
+
+canvas.addEventListener('mousedown', (e) => {
+    if (e.button === 2 || e.ctrlKey) {
+        isPanning = true;
+        lastPanX  = e.clientX;
+        lastPanY  = e.clientY;
+        e.preventDefault();
+    }
+});
+
+canvas.addEventListener('mousemove', (e) => {
+    if (isPanning) {
+        const dx = e.clientX - lastPanX;
+        const dy = e.clientY - lastPanY;
+        camera.targetX = Math.max(worldBounds.minX, Math.min(worldBounds.maxX, camera.targetX + dx));
+        camera.targetY = Math.max(worldBounds.minY, Math.min(worldBounds.maxY, camera.targetY + dy));
+        lastPanX = e.clientX;
+        lastPanY = e.clientY;
+    }
+});
+
+canvas.addEventListener('mouseup', () => { isPanning = false; });
+
+// Désactiver le menu contextuel (clic droit)
+canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
 // ========================================
 // GESTION DES CLICS
@@ -4687,6 +4813,7 @@ updateTowerButton();
                     requestAnimationFrame(() => {
                         // Double-frame : garantie absolue que le layout est stable
                         resizeCanvas();
+                        centerCameraOnPlayer(); // Centrer la vue sur le joueur
                         gameLoop();
                         console.log('🎮 Jeu PWA démarré ! Canvas :', canvas.width, '×', canvas.height);
                     });
@@ -4819,6 +4946,9 @@ function executeNewGame() {
     riverTileSet = new Set();
     generateRiver();
 
+    // --- Centrer la caméra sur le joueur ---
+    centerCameraOnPlayer();
+
     // --- Mettre à jour l'interface ---
     updateSeasonDisplay();
     updateHabitantDisplay();
@@ -4846,6 +4976,11 @@ function showTemporaryMessage(text) {
     document.body.appendChild(div);
     setTimeout(() => div.remove(), 2000);
 }
+
+// Bouton recentrer sur le joueur
+document.getElementById('recenterBtn')?.addEventListener('click', () => {
+    centerCameraOnPlayer();
+});
 
 // Event listeners du popup et du bouton
 document.getElementById('newGameBtn')?.addEventListener('click', startNewGame);
