@@ -69,7 +69,28 @@ const CONFIG = {
     coldSpringAutumnMultiplier: 0.25,  // x0.25 au printemps/automne (~22 min pour vider)
     // En été : aucune perte de froid (jauge bloquée à 100)
     coldFromCampfire: 0.08,            // Chaleur gagnée par frame près d'un feu de camp
-    coldFromShelter: 0.02              // Chaleur gagnée par frame près d'un abri
+    coldFromShelter: 0.02,             // Chaleur gagnée par frame près d'un abri
+    buildingSizes: {
+        shelter:      { width: 2, height: 2 },
+        field:        { width: 1, height: 1 },
+        palisade:     { width: 1, height: 1 },
+        bridge:       { width: 1, height: 1 },
+        mill:         { width: 2, height: 2 },
+        bakery:       { width: 2, height: 2 },
+        campfire:     { width: 1, height: 1 },
+        poissonnerie: { width: 3, height: 3 },
+        tower:        { width: 2, height: 2 }
+    },
+    spriteOffsets: {
+        shelter:      { x: 0, y: 1.2 },
+        mill:         { x: 0, y: 1.2 },
+        bakery:       { x: 0, y: 1.2 },
+        poissonnerie: { x: 0, y: 1.5 },
+        tower:        { x: 0, y: 1.2 },
+        campfire:     { x: 0, y: 0.3 },
+        field:        { x: 0, y: 0 },
+        palisade:     { x: 0, y: 0 }
+    }
 };
 
 // ========================================
@@ -541,7 +562,7 @@ function isoToGrid(screenX, screenY) {
     const logicalY = (screenY - camera.y) / currentZoom;
 
     const offsetX = canvas.width / 2;
-    const offsetY = 100;
+    const offsetY = 100 + CONFIG.tileSize / 2;
 
     const x = logicalX - offsetX;
     const y = logicalY - offsetY;
@@ -1180,9 +1201,12 @@ function drawShelter(shelter) {
         const baseY = y + CONFIG.tileSize / 4;
         const h = CONFIG.tileSize * 2.2;
         const w = shelterSprite.width * (h / shelterSprite.height);
-        ctx.drawImage(shelterSprite, x - w / 2, baseY - h, w, h);
+        // Ajustement pour centrer le sprite sur l'empreinte 2×2
+        const spriteOffsetX = CONFIG.spriteOffsets.shelter.x * CONFIG.tileSize;
+        const spriteOffsetY = CONFIG.spriteOffsets.shelter.y * CONFIG.tileSize;
+        ctx.drawImage(shelterSprite, x - w / 2 + spriteOffsetX, baseY - h + spriteOffsetY, w, h);
         // Fumée animée (conservée même avec le sprite)
-        const chimX = x - 12;
+        const chimX = x - 12 + spriteOffsetX;
         for (let i = 0; i < 4; i++) {
             const alpha = 0.26 - i * 0.05;
             const r = 3 + i * 2.5;
@@ -2896,15 +2920,47 @@ function checkTreeCutting() {
 
 // Vérifie si une tuile est libre (aucun élément du jeu dessus)
 function isTileFree(x, y) {
-    const hasTree     = trees.some(t     => !t.chopped && t.x === x && t.y === y);
-    const hasShelter  = shelters.some(s  => s.x === x && s.y === y);
-    const hasField    = fields.some(f    => f.x === x && f.y === y);
+    // Vérifier limites du monde
+    if (x < 0 || x >= CONFIG.worldWidth || y < 0 || y >= CONFIG.worldHeight) {
+        return false;
+    }
+
+    // Vérifier rivière (sauf si pont existe)
+    const key = `${x},${y}`;
+    const isRiver = riverTileSet.has(key);
+    const hasBridge = bridges.some(b => b.x === x && b.y === y);
+    if (isRiver && !hasBridge) {
+        return false;
+    }
+
+    // Vérifier occupation
+    const hasTree = trees.some(t => !t.chopped && t.x === x && t.y === y);
+    const hasShelter = shelters.some(s => s.x === x && s.y === y);
+    const hasField = fields.some(f => f.x === x && f.y === y);
     const hasPalisade = palisades.some(p => p.x === x && p.y === y);
-    const hasMill     = mills.some(m      => m.x === x && m.y === y);
-    const hasBakery   = bakeries.some(b   => b.x === x && b.y === y);
-    const hasCampfire = campfires.some(c  => c.x === x && c.y === y);
-    const isRiver     = riverTileSet.has(`${x},${y}`);
-    return !hasTree && !hasShelter && !hasField && !hasPalisade && !hasMill && !hasBakery && !hasCampfire && !isRiver;
+    const hasMill = mills.some(m => m.x === x && m.y === y);
+    const hasBakery = bakeries.some(b => b.x === x && b.y === y);
+    const hasCampfire = campfires.some(c => c.x === x && c.y === y);
+    const hasPoissonnerie = poissonneries.some(p => p.x === x && p.y === y);
+    const hasTower = towers.some(t => t.x === x && t.y === y);
+    const hasWoodPile = woodPiles.some(w => w.x === x && w.y === y);
+    const hasStonePile = stonePiles.some(s => s.x === x && s.y === y);
+
+    return !hasTree && !hasShelter && !hasField && !hasPalisade &&
+           !hasMill && !hasBakery && !hasCampfire && !hasPoissonnerie &&
+           !hasTower && !hasWoodPile && !hasStonePile;
+}
+
+// Vérifie si une zone rectangulaire est entièrement libre (pour les grands bâtiments)
+function isBuildingAreaFree(x, y, width, height) {
+    for (let dy = 0; dy < height; dy++) {
+        for (let dx = 0; dx < width; dx++) {
+            if (!isTileFree(x + dx, y + dy)) {
+                return false;
+            }
+        }
+    }
+    return true;
 }
 
 // Gère la repoussée des arbres coupés (appelé chaque frame)
@@ -4021,14 +4077,19 @@ canvas.addEventListener('click', (e) => {
         
         if (buildBridgeMode) {
             // Mode pont : la tuile cible DOIT être une tuile de rivière
-            const isRiver = riverTileSet.has(`${gridPos.x},${gridPos.y}`);
+            const key = `${gridPos.x},${gridPos.y}`;
+            const isRiver = riverTileSet.has(key);
             const alreadyBridge = bridges.some(b => b.x === gridPos.x && b.y === gridPos.y);
 
             if (!isRiver) {
-                spawnPopup('⚠️ Posez le pont sur la rivière !', gridPos.x, gridPos.y);
-            } else if (alreadyBridge) {
-                spawnPopup('Un pont existe déjà ici', gridPos.x, gridPos.y);
-            } else if (player.wood >= CONFIG.bridgeCost) {
+                spawnPopup('⚠️ Le pont doit être sur la rivière !', gridPos.x, gridPos.y);
+                return;
+            }
+            if (alreadyBridge) {
+                spawnPopup('⚠️ Un pont existe déjà ici !', gridPos.x, gridPos.y);
+                return;
+            }
+            if (player.wood >= CONFIG.bridgeCost) {
                 bridges.push({ x: gridPos.x, y: gridPos.y, orientation: bridgeOrientation });
                 player.wood -= CONFIG.bridgeCost;
                 SOUNDS.build();
@@ -4041,8 +4102,10 @@ canvas.addEventListener('click', (e) => {
             updateBridgeButton();
 
         } else if (buildPoissonnierieMode) {
-            if (!isTileFree(gridPos.x, gridPos.y)) {
-                spawnPopup('⚠️ Tuile occupée !', gridPos.x, gridPos.y);
+            const sizeP = CONFIG.buildingSizes.poissonnerie;
+            if (!isBuildingAreaFree(gridPos.x, gridPos.y, sizeP.width, sizeP.height)) {
+                spawnPopup('⚠️ Emplacement invalide !', gridPos.x, gridPos.y);
+                return;
             } else if (player.wood >= CONFIG.poissonerieCostWood) {
                 poissonneries.push({
                     x: gridPos.x, y: gridPos.y,
@@ -4061,8 +4124,10 @@ canvas.addEventListener('click', (e) => {
             updatePoissonnierieButton();
 
         } else if (buildBakeryMode) {
-            if (!isTileFree(gridPos.x, gridPos.y)) {
-                spawnPopup('⚠️ Tuile occupée !', gridPos.x, gridPos.y);
+            const sizeBk = CONFIG.buildingSizes.bakery;
+            if (!isBuildingAreaFree(gridPos.x, gridPos.y, sizeBk.width, sizeBk.height)) {
+                spawnPopup('⚠️ Emplacement invalide !', gridPos.x, gridPos.y);
+                return;
             } else if (player.wood >= CONFIG.bakeryCostWood) {
                 bakeries.push({
                     x: gridPos.x, y: gridPos.y,
@@ -4081,8 +4146,10 @@ canvas.addEventListener('click', (e) => {
             updateBakeryButton();
 
         } else if (buildCampfireMode) {
-            if (!isTileFree(gridPos.x, gridPos.y)) {
-                spawnPopup('⚠️ Tuile occupée !', gridPos.x, gridPos.y);
+            const sizeCf = CONFIG.buildingSizes.campfire;
+            if (!isBuildingAreaFree(gridPos.x, gridPos.y, sizeCf.width, sizeCf.height)) {
+                spawnPopup('⚠️ Emplacement invalide !', gridPos.x, gridPos.y);
+                return;
             } else if (player.wood >= CONFIG.campfireCost) {
                 campfires.push({ x: gridPos.x, y: gridPos.y, cookingFish: false, cookProgress: 0 });
                 player.wood -= CONFIG.campfireCost;
@@ -4097,23 +4164,23 @@ canvas.addEventListener('click', (e) => {
 
         } else if (buildMillMode) {
             // Mode moulin : placer le moulin si assez de ressources
-            if (player.wood >= CONFIG.millCostWood && player.wheat >= CONFIG.millCostWheat) {
-                const occupied = mills.some(m => m.x === gridPos.x && m.y === gridPos.y)
-                              || shelters.some(s => s.x === gridPos.x && s.y === gridPos.y);
-                if (!occupied) {
-                    mills.push({
-                        x: gridPos.x, y: gridPos.y,
-                        wheatStored: 0, flourReady: 0,
-                        isWorking: false, millProgress: 0,
-                        angle: 0, depositCooldown: 0
-                    });
-                    player.wood  -= CONFIG.millCostWood;
-                    player.wheat -= CONFIG.millCostWheat;
-                    SOUNDS.build();
-                    spawnPopup('⚙️ Moulin construit !', gridPos.x, gridPos.y);
-                    updateWoodDisplay();
-                    updateWheatDisplay();
-                }
+            const sizeMl = CONFIG.buildingSizes.mill;
+            if (!isBuildingAreaFree(gridPos.x, gridPos.y, sizeMl.width, sizeMl.height)) {
+                spawnPopup('⚠️ Emplacement invalide !', gridPos.x, gridPos.y);
+                return;
+            } else if (player.wood >= CONFIG.millCostWood && player.wheat >= CONFIG.millCostWheat) {
+                mills.push({
+                    x: gridPos.x, y: gridPos.y,
+                    wheatStored: 0, flourReady: 0,
+                    isWorking: false, millProgress: 0,
+                    angle: 0, depositCooldown: 0
+                });
+                player.wood  -= CONFIG.millCostWood;
+                player.wheat -= CONFIG.millCostWheat;
+                SOUNDS.build();
+                spawnPopup('⚙️ Moulin construit !', gridPos.x, gridPos.y);
+                updateWoodDisplay();
+                updateWheatDisplay();
             } else {
                 spawnPopup('Ressources insuffisantes !', gridPos.x, gridPos.y);
             }
@@ -4184,18 +4251,18 @@ canvas.addEventListener('click', (e) => {
 
         } else if (buildTowerMode) {
             // Mode tour : construire une tour de guet
-            if (player.wood >= CONFIG.towerCostWood && player.stone >= CONFIG.towerCostStone) {
-                const occupied = towers.some(t => t.x === gridPos.x && t.y === gridPos.y)
-                              || shelters.some(s => s.x === gridPos.x && s.y === gridPos.y);
-                if (!occupied) {
-                    towers.push({ x: gridPos.x, y: gridPos.y });
-                    player.wood  -= CONFIG.towerCostWood;
-                    player.stone -= CONFIG.towerCostStone;
-                    SOUNDS.build();
-                    spawnPopup('🗼 Tour construite !', gridPos.x, gridPos.y);
-                    updateWoodDisplay();
-                    updateStoneDisplay();
-                }
+            const sizeTw = CONFIG.buildingSizes.tower;
+            if (!isBuildingAreaFree(gridPos.x, gridPos.y, sizeTw.width, sizeTw.height)) {
+                spawnPopup('⚠️ Emplacement invalide !', gridPos.x, gridPos.y);
+                return;
+            } else if (player.wood >= CONFIG.towerCostWood && player.stone >= CONFIG.towerCostStone) {
+                towers.push({ x: gridPos.x, y: gridPos.y });
+                player.wood  -= CONFIG.towerCostWood;
+                player.stone -= CONFIG.towerCostStone;
+                SOUNDS.build();
+                spawnPopup('🗼 Tour construite !', gridPos.x, gridPos.y);
+                updateWoodDisplay();
+                updateStoneDisplay();
             } else {
                 spawnPopup(`${CONFIG.towerCostWood}🪵 + ${CONFIG.towerCostStone}🪨 requis`, gridPos.x, gridPos.y);
             }
@@ -4204,15 +4271,16 @@ canvas.addEventListener('click', (e) => {
 
         } else if (buildPalisadeMode) {
             // Mode palissade : poser un segment
-            if (player.wood >= CONFIG.palisadeCost) {
-                const alreadyThere = palisades.some(p => p.x === gridPos.x && p.y === gridPos.y);
-                if (!alreadyThere) {
-                    palisades.push({ x: gridPos.x, y: gridPos.y });
-                    player.wood -= CONFIG.palisadeCost;
-                    SOUNDS.build();
-                    spawnPopup('🛡️ Palissade !', gridPos.x, gridPos.y);
-                    updateWoodDisplay();
-                }
+            const sizePal = CONFIG.buildingSizes.palisade;
+            if (!isBuildingAreaFree(gridPos.x, gridPos.y, sizePal.width, sizePal.height)) {
+                spawnPopup('⚠️ Emplacement invalide !', gridPos.x, gridPos.y);
+                return;
+            } else if (player.wood >= CONFIG.palisadeCost) {
+                palisades.push({ x: gridPos.x, y: gridPos.y });
+                player.wood -= CONFIG.palisadeCost;
+                SOUNDS.build();
+                spawnPopup('🛡️ Palissade !', gridPos.x, gridPos.y);
+                updateWoodDisplay();
             } else {
                 spawnPopup('Pas assez de bois !', gridPos.x, gridPos.y);
                 buildPalisadeMode = false;
@@ -4221,21 +4289,21 @@ canvas.addEventListener('click', (e) => {
 
         } else if (buildFieldMode) {
             // Mode plantation : poser un champ de blé
-            if (player.wood >= CONFIG.fieldCost) {
-                // Vérifier qu'il n'y a pas déjà un champ ici
-                const occupied = fields.some(f => f.x === gridPos.x && f.y === gridPos.y);
-                if (!occupied) {
-                    fields.push({
-                        x: gridPos.x,
-                        y: gridPos.y,
-                        stage: 0,
-                        growTimer: CONFIG.growthStageTime
-                    });
-                    player.wood -= CONFIG.fieldCost;
-                    SOUNDS.build();
-                    spawnPopup('🌾 Champ planté !', gridPos.x, gridPos.y);
-                    updateWoodDisplay();
-                }
+            const sizeFld = CONFIG.buildingSizes.field;
+            if (!isBuildingAreaFree(gridPos.x, gridPos.y, sizeFld.width, sizeFld.height)) {
+                spawnPopup('⚠️ Emplacement invalide !', gridPos.x, gridPos.y);
+                return;
+            } else if (player.wood >= CONFIG.fieldCost) {
+                fields.push({
+                    x: gridPos.x,
+                    y: gridPos.y,
+                    stage: 0,
+                    growTimer: CONFIG.growthStageTime
+                });
+                player.wood -= CONFIG.fieldCost;
+                SOUNDS.build();
+                spawnPopup('🌾 Champ planté !', gridPos.x, gridPos.y);
+                updateWoodDisplay();
             } else {
                 spawnPopup('Pas assez de bois !', gridPos.x, gridPos.y);
             }
@@ -4244,7 +4312,11 @@ canvas.addEventListener('click', (e) => {
 
         } else if (buildMode) {
             // Mode construction : placer un abri
-            if (player.wood >= SHELTER_COST) {
+            const sizeSh = CONFIG.buildingSizes.shelter;
+            if (!isBuildingAreaFree(gridPos.x, gridPos.y, sizeSh.width, sizeSh.height)) {
+                spawnPopup('⚠️ Emplacement invalide !', gridPos.x, gridPos.y);
+                return;
+            } else if (player.wood >= SHELTER_COST) {
                 const newShelter = { x: gridPos.x, y: gridPos.y, level: 1 };
                 shelters.push(newShelter);
                 player.wood -= SHELTER_COST;
@@ -4254,15 +4326,12 @@ canvas.addEventListener('click', (e) => {
                 updateShelterDisplay();
                 spawnHabitant(newShelter);
                 spawnPopup('👤 Un habitant arrive !', gridPos.x, gridPos.y - 1);
-
-                // Désactiver le mode construction
-                buildMode = false;
-                updateBuildButton();
             } else {
-                console.log('❌ Pas assez de bois ! Il faut ' + SHELTER_COST + ' bois.');
-                buildMode = false;
-                updateBuildButton();
+                spawnPopup('Pas assez de bois !', gridPos.x, gridPos.y);
             }
+            // Désactiver le mode construction
+            buildMode = false;
+            updateBuildButton();
         } else {
             // Mode normal : vérifier si on clique sur un abri existant pour l'améliorer
             const clickedShelter = shelters.find(s => s.x === gridPos.x && s.y === gridPos.y);
@@ -4984,6 +5053,12 @@ document.getElementById('recenterBtn')?.addEventListener('click', () => {
 
 // Event listeners du popup et du bouton
 document.getElementById('newGameBtn')?.addEventListener('click', startNewGame);
+document.getElementById('resetBtn')?.addEventListener('click', () => {
+    if (confirm('ATTENTION : Ceci va effacer toute la progression ! Continuer ?')) {
+        localStorage.clear();
+        location.reload();
+    }
+});
 document.getElementById('confirmYes')?.addEventListener('click', executeNewGame);
 document.getElementById('confirmNo')?.addEventListener('click', () => {
     document.getElementById('confirmPopup')?.classList.add('hidden');

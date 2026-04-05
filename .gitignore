@@ -11,3 +11,10 @@ desktop.ini
 # Fichiers temporaires
 *.tmp
 *.bak
+
+# Fichiers de mémoire Claude Code (privés)
+CLAUDE.md
+MEMORY.md
+CLAUDE.local.md
+.claude/
+memory/
