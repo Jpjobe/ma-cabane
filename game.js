@@ -70,6 +70,62 @@ const CONFIG = {
     // En été : aucune perte de froid (jauge bloquée à 100)
     coldFromCampfire: 0.08,            // Chaleur gagnée par frame près d'un feu de camp
     coldFromShelter: 0.02,             // Chaleur gagnée par frame près d'un abri
+    // ---- Scierie ----
+    sawyerCostWood: 10,        // Bois pour construire une scierie
+    sawyerCostStone: 5,        // Pierre pour construire une scierie
+    sawyerDuration: 1800,      // Frames par fournée (~30s à 60fps)
+    sawyerWoodPerBatch: 3,     // Bois consommé par fournée
+    sawyerPlanksPerBatch: 5,   // Planches produites par fournée
+    sawyerMaxWood: 9,          // Capacité max de bois stocké dans la scierie
+    // ---- Mine ----
+    mineCostWood: 20,          // Bois pour construire une mine
+    mineCostStone: 15,         // Pierre pour construire une mine
+    miningDuration: 3600,      // Frames par cycle d'extraction (~60s à 60fps)
+    mineIronPerBatch: 2,       // Lingots de fer produits par cycle
+    mineCopperPerBatch: 1,     // Lingots de cuivre produits par cycle
+    mineGoldPerBatch: 1,       // Pépites d'or produites (si chance)
+    mineGoldChance: 0.3,       // Probabilité d'or à chaque cycle (30%)
+    // ---- Charbonnerie ----
+    charboCostWood: 8,         // Bois pour construire une charbonnerie
+    charboCostStone: 3,        // Pierre pour construire une charbonnerie
+    charboDuration: 1200,      // Frames par fournée (~20s à 60fps)
+    charboWoodPerBatch: 5,     // Bois consommé par fournée
+    charboPerBatch: 3,         // Charbon produit par fournée
+    charboMaxWood: 15,         // Capacité max de bois stocké dans la charbonnerie
+    // ---- Forge ----
+    forgeCostWood: 12,         // Bois pour construire une forge
+    forgeCostStone: 8,         // Pierre pour construire une forge
+    forgeDuration: 2400,       // Frames par fournée (~40s à 60fps)
+    forgeIronPerBatch: 2,      // Fer consommé par fournée
+    forgeCharboPerBatch: 2,    // Charbon consommé par fournée
+    forgeLingotsPerBatch: 1,   // Lingots produits par fournée
+    forgeMaxIron: 6,           // Capacité max de fer stocké dans la forge
+    forgeMaxCharbo: 6,         // Capacité max de charbon stocké dans la forge
+    // ---- Grenier ----
+    grenierCostWood: 6,        // Bois pour construire un grenier
+    grenierCostStone: 2,       // Pierre pour construire un grenier
+    grenierMaxWheat: 30,       // Capacité max de blé stocké dans le grenier
+    grenierMaxFlour: 10,       // Capacité max de farine stockée dans le grenier
+    // ---- Séchoir ----
+    sechoirCostWood: 5,        // Bois pour construire un séchoir
+    sechoirCostStone: 2,       // Pierre pour construire un séchoir
+    sechoirDuration: 1800,     // Frames par fournée (~30s à 60fps)
+    sechoirFishPerBatch: 2,    // Poissons crus consommés par fournée
+    sechoirDriedPerBatch: 3,   // Poissons séchés produits par fournée
+    sechoirMaxFish: 6,         // Capacité max de poisson stocké dans le séchoir
+    hungerFromDriedFish: 20,   // Faim restaurée par un poisson séché
+    // ---- Ferme ----
+    fermeCostWood: 10,         // Bois pour construire une ferme
+    fermeCostStone: 5,         // Pierre pour construire une ferme
+    fermeDuration: 3600,       // Frames par cycle de production (~60s à 60fps)
+    fermeMaxLaine: 5,          // Capacité max de laine stockée
+    fermeMaxViande: 5,         // Capacité max de viande stockée
+    hungerFromMeat: 15,        // Faim restaurée par de la viande
+    // ---- Marché ----
+    marcheCostWood: 12,        // Bois pour construire un marché
+    marcheCostStone: 6,        // Pierre pour construire un marché
+    marcheDuration: 7200,      // Frames entre chaque livraison (~2min à 60fps)
+    marcheMaxStock: 3,         // Nombre max de livraisons en attente
     buildingSizes: {
         shelter:      { width: 2, height: 2 },
         field:        { width: 1, height: 1 },
@@ -79,7 +135,15 @@ const CONFIG = {
         bakery:       { width: 2, height: 2 },
         campfire:     { width: 1, height: 1 },
         poissonnerie: { width: 3, height: 3 },
-        tower:        { width: 2, height: 2 }
+        tower:        { width: 2, height: 2 },
+        mine:         { width: 2, height: 2 },
+        sawyer:       { width: 2, height: 2 },
+        charbo:       { width: 2, height: 2 },
+        forge:        { width: 2, height: 2 },
+        grenier:      { width: 2, height: 2 },
+        sechoir:      { width: 2, height: 2 },
+        ferme:        { width: 2, height: 2 },
+        marche:       { width: 2, height: 2 }
     },
     spriteOffsets: {
         shelter:      { x: 0, y: 1.2 },
@@ -387,7 +451,7 @@ const SEASON_LABELS = ['Printemps', 'Été', 'Automne', 'Hiver'];
 // Sprites organisés par saison : seasonSprites['hiver']['tree'] etc.
 const seasonSprites = {};
 for (const s of SEASONS) {
-    seasonSprites[s] = { player: null, tree: null, shelter: null, shelter2: null, wood: null, mill: null, bakery: null, poissonnerie: null, rocher: null };
+    seasonSprites[s] = { player: null, tree: null, shelter: null, shelter2: null, wood: null, mill: null, bakery: null, poissonnerie: null, rocher: null, sawyer: null };
 }
 
 // Sprites des personnages secondaires (partagés entre toutes les saisons)
@@ -401,6 +465,18 @@ let wolfSprite = null;
 
 // Sprite de la tour de guet (un seul fichier, pas de variante saisonnière)
 let towerSprite = null;
+
+// Sprite de la mine (un seul fichier, pas de variante saisonnière)
+let mineSprite = null;
+
+// Sprite du mouton (pas de variante saisonnière)
+let moutonSprite = null;
+
+// Sprite du poisson séché (pas de variante saisonnière)
+let poissonSecheSprite = null;
+
+// Sprite de la laine (pas de variante saisonnière)
+let laineSprite = null;
 
 // Retourne le sprite actif pour la saison courante
 function getSprite(name) {
@@ -461,6 +537,57 @@ function loadSprites() {
             img.onerror = () => { console.warn(`Sprite manquant : assets/Rocher_${saison}.png`); resolve(); };
             img.src = `assets/Rocher_${saison}.png`;
         }));
+        // Nouveaux sprites utilisent 'ete' (sans accent) au lieu de 'été'
+        const saisonFile = saison === 'été' ? 'ete' : saison;
+        // Scierie : scierie_saison.png (minuscules, ete sans accent)
+        promises.push(new Promise(resolve => {
+            const img = new Image();
+            img.onload  = () => { seasonSprites[saison].sawyer = img; resolve(); };
+            img.onerror = () => { console.warn(`Sprite manquant : assets/scierie_${saisonFile}.png`); resolve(); };
+            img.src = `assets/scierie_${saisonFile}.png`;
+        }));
+        // Charbonnerie : charbonnerie_saison.png
+        promises.push(new Promise(resolve => {
+            const img = new Image();
+            img.onload  = () => { seasonSprites[saison].charbo = img; resolve(); };
+            img.onerror = () => { console.warn(`Sprite manquant : assets/charbonnerie_${saisonFile}.png`); resolve(); };
+            img.src = `assets/charbonnerie_${saisonFile}.png`;
+        }));
+        // Forge : forge_saison.png
+        promises.push(new Promise(resolve => {
+            const img = new Image();
+            img.onload  = () => { seasonSprites[saison].forge = img; resolve(); };
+            img.onerror = () => { console.warn(`Sprite manquant : assets/forge_${saisonFile}.png`); resolve(); };
+            img.src = `assets/forge_${saisonFile}.png`;
+        }));
+        // Grenier : grenier_saison.png
+        promises.push(new Promise(resolve => {
+            const img = new Image();
+            img.onload  = () => { seasonSprites[saison].grenier = img; resolve(); };
+            img.onerror = () => { console.warn(`Sprite manquant : assets/grenier_${saisonFile}.png`); resolve(); };
+            img.src = `assets/grenier_${saisonFile}.png`;
+        }));
+        // Séchoir : sechoir_saison.png
+        promises.push(new Promise(resolve => {
+            const img = new Image();
+            img.onload  = () => { seasonSprites[saison].sechoir = img; resolve(); };
+            img.onerror = () => { console.warn(`Sprite manquant : assets/sechoir_${saisonFile}.png`); resolve(); };
+            img.src = `assets/sechoir_${saisonFile}.png`;
+        }));
+        // Ferme : ferme_saison.png
+        promises.push(new Promise(resolve => {
+            const img = new Image();
+            img.onload  = () => { seasonSprites[saison].ferme = img; resolve(); };
+            img.onerror = () => { console.warn(`Sprite manquant : assets/ferme_${saisonFile}.png`); resolve(); };
+            img.src = `assets/ferme_${saisonFile}.png`;
+        }));
+        // Marché : marche_saison.png
+        promises.push(new Promise(resolve => {
+            const img = new Image();
+            img.onload  = () => { seasonSprites[saison].marche = img; resolve(); };
+            img.onerror = () => { console.warn(`Sprite manquant : assets/marche_${saisonFile}.png`); resolve(); };
+            img.src = `assets/marche_${saisonFile}.png`;
+        }));
     }
     // Sprite loup (sans saison, commun à toutes les saisons)
     promises.push(new Promise(resolve => {
@@ -475,6 +602,34 @@ function loadSprites() {
         img.onload  = () => { towerSprite = img; resolve(); };
         img.onerror = () => { console.warn('Sprite manquant : assets/tour.png'); resolve(); };
         img.src = 'assets/tour.png';
+    }));
+    // Sprite mine (sans saison)
+    promises.push(new Promise(resolve => {
+        const img = new Image();
+        img.onload  = () => { mineSprite = img; resolve(); };
+        img.onerror = () => { console.warn('Sprite manquant : assets/mine.png'); resolve(); };
+        img.src = 'assets/mine.png';
+    }));
+    // Sprite mouton (sans saison)
+    promises.push(new Promise(resolve => {
+        const img = new Image();
+        img.onload  = () => { moutonSprite = img; resolve(); };
+        img.onerror = () => { console.warn('Sprite manquant : assets/mouton.png'); resolve(); };
+        img.src = 'assets/mouton.png';
+    }));
+    // Sprite poisson séché (sans saison)
+    promises.push(new Promise(resolve => {
+        const img = new Image();
+        img.onload  = () => { poissonSecheSprite = img; resolve(); };
+        img.onerror = () => { console.warn('Sprite manquant : assets/poisson_seche.png'); resolve(); };
+        img.src = 'assets/poisson_seche.png';
+    }));
+    // Sprite laine (sans saison)
+    promises.push(new Promise(resolve => {
+        const img = new Image();
+        img.onload  = () => { laineSprite = img; resolve(); };
+        img.onerror = () => { console.warn('Sprite manquant : assets/laine.png'); resolve(); };
+        img.src = 'assets/laine.png';
     }));
     // Sprites ponts (deux orientations, sans saison)
     for (const [key, file] of [['normal', 'Pont.png'], ['alt', 'Pont_2.png']]) {
@@ -595,6 +750,15 @@ const player = {
     fish: 0,             // Inventaire de poisson cru
     cookedFish: 0,       // Inventaire de poisson cuit
     bread: 0,            // Inventaire de pain
+    planks: 0,           // Planches produites par la scierie
+    iron: 0,             // Minerai de fer extrait
+    copper: 0,           // Minerai de cuivre extrait
+    gold: 0,             // Pépites d'or extraites
+    charbon: 0,          // Charbon produit par la charbonnerie
+    lingots: 0,          // Lingots de fer produits par la forge
+    driedFish: 0,        // Poisson séché produit par le séchoir
+    laine: 0,            // Laine produite par la ferme
+    viande: 0,           // Viande produite par la ferme
     hunger: 100,         // Jauge de faim (0-100)
     cold: 100,           // Jauge de chaleur corporelle (0-100, 0 = mort de froid)
     fishingTimer: 0,     // Progression de la pêche en cours
@@ -717,7 +881,7 @@ const stonePiles = [];
 }
 
 // Orientation courante pour la prochaine pose de pont (0 = Pont.png, 1 = Pont_2.png)
-let bridgeOrientation = 0;
+let bridgeOrientation = 1;
 
 // Les lapins (animaux sauvages)
 const rabbits = [];
@@ -739,6 +903,66 @@ const towers = [];
 
 // Mode de construction de tour de guet
 let buildTowerMode = false;
+
+// Les scieries construites par le joueur
+// Chaque scierie : { x, y, woodStored, planksReady, sawProgress, isWorking, depositCooldown }
+const sawyers = [];
+
+// Mode de construction de scierie
+let buildSawyerMode = false;
+
+// Les mines construites par le joueur
+// Chaque mine : { x, y, miningProgress, ironReady, copperReady, goldReady, isWorking }
+const mines = [];
+
+// Mode de construction de mine
+let buildMineMode = false;
+
+// Les charbonneries construites par le joueur
+// Chaque charbonnerie : { x, y, woodStored, charboReady, charboProgress, isWorking, depositCooldown }
+const charbonneries = [];
+
+// Mode de construction de charbonnerie
+let buildCharboMode = false;
+
+// Les forges construites par le joueur
+// Chaque forge : { x, y, ironStored, charboStored, lingotsReady, forgeProgress, isWorking, depositCooldown }
+const forges = [];
+
+// Mode de construction de forge
+let buildForgeMode = false;
+
+// Les greniers construits par le joueur
+// Chaque grenier : { x, y, wheatStored, flourStored, depositCooldown }
+const greniers = [];
+
+// Mode de construction de grenier
+let buildGrenierMode = false;
+
+// Les séchoirs construits par le joueur
+// Chaque séchoir : { x, y, fishStored, driedReady, dryProgress, isWorking, depositCooldown }
+const sechoirs = [];
+
+// Mode de construction de séchoir
+let buildSechoirMode = false;
+
+// Les fermes construites par le joueur
+// Chaque ferme : { x, y, laineStored, viandeStored, prodTimer }
+const fermes = [];
+
+// Mode de construction de ferme
+let buildFermeMode = false;
+
+// Les marchés construits par le joueur
+// Chaque marché : { x, y, stock: [{type, amount}], tradeTimer }
+const marches = [];
+
+// Mode de construction de marché
+let buildMarcheMode = false;
+
+// Les moutons (spawns près des fermes construites)
+// Chaque mouton : { x, y, targetX, targetY, ferme, walkCycle, isMoving, waitTimer, hasWool }
+const sheep = [];
 
 // Les loups (apparaissent uniquement en hiver)
 const wolves = [];
@@ -2942,13 +3166,23 @@ function isTileFree(x, y) {
     const hasBakery = bakeries.some(b => b.x === x && b.y === y);
     const hasCampfire = campfires.some(c => c.x === x && c.y === y);
     const hasPoissonnerie = poissonneries.some(p => p.x === x && p.y === y);
-    const hasTower = towers.some(t => t.x === x && t.y === y);
-    const hasWoodPile = woodPiles.some(w => w.x === x && w.y === y);
+    const hasTower  = towers.some(t  => t.x === x && t.y === y);
+    const hasMine   = mines.some(m   => m.x === x && m.y === y);
+    const hasSawyer = sawyers.some(s => s.x === x && s.y === y);
+    const hasCharbo  = charbonneries.some(c => c.x === x && c.y === y);
+    const hasForge   = forges.some(f   => f.x === x && f.y === y);
+    const hasGrenier = greniers.some(g  => g.x === x && g.y === y);
+    const hasSechoir = sechoirs.some(s  => s.x === x && s.y === y);
+    const hasFerme   = fermes.some(f   => f.x === x && f.y === y);
+    const hasMarche  = marches.some(m  => m.x === x && m.y === y);
+    const hasWoodPile  = woodPiles.some(w  => w.x === x && w.y === y);
     const hasStonePile = stonePiles.some(s => s.x === x && s.y === y);
 
     return !hasTree && !hasShelter && !hasField && !hasPalisade &&
            !hasMill && !hasBakery && !hasCampfire && !hasPoissonnerie &&
-           !hasTower && !hasWoodPile && !hasStonePile;
+           !hasTower && !hasMine && !hasSawyer && !hasCharbo && !hasForge &&
+           !hasGrenier && !hasSechoir && !hasFerme && !hasMarche &&
+           !hasWoodPile && !hasStonePile;
 }
 
 // Vérifie si une zone rectangulaire est entièrement libre (pour les grands bâtiments)
@@ -3186,6 +3420,1100 @@ function checkMillInteraction() {
 }
 
 // ========================================
+// SCIERIE
+// ========================================
+
+// Dessine une scierie avec son sprite saisonnier, barre de progression et indicateurs
+function drawSawyer(saw) {
+    const pos = gridToIso(saw.x, saw.y);
+    const ox = canvas.width / 2, oy = 100;
+    const x  = pos.x + ox;
+    const y  = pos.y + oy;
+    const ts = CONFIG.tileSize;
+    const gy = y + ts / 4;
+
+    const sprite = getSprite('sawyer');
+    if (sprite) {
+        const h = ts * 2.2;
+        const w = sprite.width * (h / sprite.height);
+        ctx.drawImage(sprite, x - w / 2, gy - h, w, h);
+
+        // Barre de progression de sciage (marron clair)
+        if (saw.isWorking) {
+            const pct  = saw.sawProgress / CONFIG.sawyerDuration;
+            const barW = 44, barX = x - barW / 2, barY = gy - h - 14;
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.beginPath(); ctx.roundRect(barX - 1, barY - 1, barW + 2, 7, 3); ctx.fill();
+            ctx.fillStyle = '#c8841a';
+            ctx.beginPath(); ctx.roundRect(barX, barY, barW * pct, 5, 2); ctx.fill();
+            ctx.font = '10px Arial'; ctx.textAlign = 'center';
+            ctx.fillText('🪚 Sciage...', x, barY - 5);
+        }
+
+        // Indicateur bois stocké / planches prêtes
+        if (!saw.isWorking && (saw.woodStored > 0 || saw.planksReady > 0)) {
+            const labelY = gy - h - 6;
+            ctx.fillStyle = 'rgba(20,10,5,0.65)';
+            ctx.beginPath(); ctx.roundRect(x - 32, labelY - 12, 64, 16, 5); ctx.fill();
+            ctx.fillStyle = saw.planksReady > 0 ? '#ffe060' : '#ffffff';
+            ctx.font = '10px Arial'; ctx.textAlign = 'center';
+            const label = saw.planksReady > 0
+                ? `✨ Planches x${saw.planksReady} prêtes !`
+                : `🪵 Bois stocké : ${saw.woodStored}`;
+            ctx.fillText(label, x, labelY - 3);
+        }
+        return;
+    }
+
+    // Fallback canvas si sprite absent
+    ctx.fillStyle = '#8B5A2B';
+    ctx.fillRect(x - 18, gy - 38, 36, 38);
+    ctx.fillStyle = '#6B3A10';
+    ctx.fillRect(x - 22, gy - 44, 44, 10);
+    ctx.font = '15px Arial'; ctx.textAlign = 'center';
+    ctx.fillText('🪚', x, gy - 20);
+}
+
+// Met à jour la production de chaque scierie (bois → planches)
+function updateSawyers() {
+    for (const saw of sawyers) {
+        if (saw.isWorking) {
+            saw.sawProgress++;
+            if (saw.sawProgress >= CONFIG.sawyerDuration) {
+                // Fournée terminée !
+                saw.woodStored   -= CONFIG.sawyerWoodPerBatch;
+                saw.planksReady  += CONFIG.sawyerPlanksPerBatch;
+                saw.isWorking     = false;
+                saw.sawProgress   = 0;
+                spawnPopup('✨ Planches prêtes !', saw.x, saw.y);
+            }
+        } else {
+            // Relancer automatiquement si assez de bois stocké
+            if (saw.woodStored >= CONFIG.sawyerWoodPerBatch) {
+                saw.isWorking   = true;
+                saw.sawProgress = 0;
+            }
+        }
+        // Décrémenter le cooldown de dépôt
+        if (saw.depositCooldown > 0) saw.depositCooldown--;
+    }
+}
+
+// Gère les interactions joueur ↔ scierie (dépôt bois, récupération planches)
+function checkSawyerInteraction() {
+    for (const saw of sawyers) {
+        const dx = player.x - saw.x;
+        const dy = player.y - saw.y;
+        if (Math.sqrt(dx * dx + dy * dy) > 1.5) continue;
+
+        // Récupérer les planches si prêtes
+        if (saw.planksReady > 0) {
+            player.planks += saw.planksReady;
+            spawnPopup(`+${saw.planksReady} 🪵→ Planches !`, saw.x, saw.y);
+            saw.planksReady = 0;
+            updatePlanksDisplay();
+        }
+
+        // Déposer du bois si le joueur en a et que la scierie a de la place
+        if (player.wood > 0 && saw.woodStored < CONFIG.sawyerMaxWood && saw.depositCooldown <= 0) {
+            const toDeposit = Math.min(
+                player.wood,
+                CONFIG.sawyerWoodPerBatch,
+                CONFIG.sawyerMaxWood - saw.woodStored
+            );
+            saw.woodStored     += toDeposit;
+            player.wood        -= toDeposit;
+            saw.depositCooldown = 300; // ~5s avant de pouvoir redéposer
+            spawnPopup(`🪵 +${toDeposit} déposé`, saw.x, saw.y);
+            updateWoodDisplay();
+        }
+    }
+}
+
+// Met à jour l'affichage des planches dans le header
+function updatePlanksDisplay() {
+    const el = document.getElementById('planks');
+    if (el) el.textContent = player.planks;
+}
+
+// Met à jour le bouton de construction de scierie selon l'état du mode
+function updateSawyerButton() {
+    const btn = document.getElementById('sawyerBtn');
+    if (!btn) return;
+    if (buildSawyerMode) {
+        btn.classList.add('active');
+        btn.textContent = '🎯 Clique sur la carte pour placer la scierie';
+    } else {
+        btn.classList.remove('active');
+        btn.textContent = `🪚 Scierie (${CONFIG.sawyerCostWood}🪵 + ${CONFIG.sawyerCostStone}🪨)`;
+        btn.disabled = player.wood < CONFIG.sawyerCostWood || player.stone < CONFIG.sawyerCostStone;
+    }
+}
+
+// ========================================
+// MINE
+// ========================================
+
+// Dessine une mine avec son sprite, barre de progression et indicateurs de ressources
+function drawMine(mine) {
+    const pos = gridToIso(mine.x, mine.y);
+    const x   = pos.x + canvas.width / 2;
+    const y   = pos.y + 100 + CONFIG.tileSize / 4;
+
+    if (mineSprite) {
+        const h = CONFIG.tileSize * 2.0;
+        const w = mineSprite.width * (h / mineSprite.height);
+        ctx.drawImage(mineSprite, x - w / 2, y - h + CONFIG.tileSize * 0.2, w, h);
+    } else {
+        // Fallback canvas : carré marron foncé avec icône
+        ctx.fillStyle = '#5a3a1a';
+        ctx.fillRect(x - 20, y - 40, 40, 40);
+        ctx.fillStyle = '#3a2010';
+        ctx.fillRect(x - 12, y - 48, 24, 12);
+        ctx.font = '16px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('⛏️', x, y - 22);
+    }
+
+    // Barre de progression de l'extraction (bleu foncé)
+    if (mine.isWorking) {
+        const barW   = CONFIG.tileSize * 1.2;
+        const barH   = 5;
+        const barX   = x - barW / 2;
+        const barY   = y - CONFIG.tileSize * 2.2;
+        const pct    = mine.miningProgress / CONFIG.miningDuration;
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(barX, barY, barW, barH);
+        ctx.fillStyle = '#4488cc';
+        ctx.fillRect(barX, barY, barW * pct, barH);
+    }
+
+    // Indicateur ressources prêtes à collecter
+    const total = mine.ironReady + mine.copperReady + mine.goldReady;
+    if (total > 0) {
+        ctx.font = `${Math.max(10, CONFIG.tileSize * 0.38)}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const label = (mine.ironReady   > 0 ? `⚙️${mine.ironReady}` : '') +
+                      (mine.copperReady > 0 ? `🟤${mine.copperReady}` : '') +
+                      (mine.goldReady   > 0 ? `✨${mine.goldReady}` : '');
+        ctx.fillStyle = 'rgba(0,0,0,0.55)';
+        ctx.fillRect(x - 28, y - CONFIG.tileSize * 2.8 - 9, 56, 18);
+        ctx.fillStyle = '#ffe87a';
+        ctx.fillText(label, x, y - CONFIG.tileSize * 2.8);
+    }
+}
+
+// Met à jour la progression de chaque mine (production continue de minerais)
+function updateMines() {
+    for (const mine of mines) {
+        if (mine.isWorking) {
+            mine.miningProgress++;
+            if (mine.miningProgress >= CONFIG.miningDuration) {
+                // Cycle terminé : ajouter les minerais au stock de la mine
+                mine.ironReady   += CONFIG.mineIronPerBatch;
+                mine.copperReady += CONFIG.mineCopperPerBatch;
+                if (Math.random() < CONFIG.mineGoldChance) {
+                    mine.goldReady += CONFIG.mineGoldPerBatch;
+                }
+                mine.miningProgress = 0;
+                spawnPopup('⛏️ Minerais prêts !', mine.x, mine.y);
+            }
+        } else {
+            // Relancer automatiquement le cycle
+            mine.isWorking    = true;
+            mine.miningProgress = 0;
+        }
+    }
+}
+
+// Gère l'interaction joueur ↔ mine (collecte des minerais quand on est proche)
+function checkMineInteraction() {
+    for (const mine of mines) {
+        const dx = player.x - mine.x;
+        const dy = player.y - mine.y;
+        if (Math.sqrt(dx * dx + dy * dy) > 1.8) continue;
+
+        const total = mine.ironReady + mine.copperReady + mine.goldReady;
+        if (total === 0) continue;
+
+        // Collecter tout ce qui est prêt
+        if (mine.ironReady > 0) {
+            player.iron += mine.ironReady;
+            spawnPopup(`+${mine.ironReady} ⚙️ Fer`, mine.x, mine.y);
+            mine.ironReady = 0;
+            updateIronDisplay();
+        }
+        if (mine.copperReady > 0) {
+            player.copper += mine.copperReady;
+            spawnPopup(`+${mine.copperReady} 🟤 Cuivre`, mine.x, mine.y);
+            mine.copperReady = 0;
+            updateCopperDisplay();
+        }
+        if (mine.goldReady > 0) {
+            player.gold += mine.goldReady;
+            spawnPopup(`+${mine.goldReady} ✨ Or !`, mine.x, mine.y);
+            mine.goldReady = 0;
+            updateGoldDisplay();
+        }
+    }
+}
+
+// Met à jour l'affichage du fer dans le header
+function updateIronDisplay() {
+    const el = document.getElementById('iron');
+    if (el) el.textContent = player.iron;
+}
+
+// Met à jour l'affichage du cuivre dans le header
+function updateCopperDisplay() {
+    const el = document.getElementById('copper');
+    if (el) el.textContent = player.copper;
+}
+
+// Met à jour l'affichage de l'or dans le header
+function updateGoldDisplay() {
+    const el = document.getElementById('gold');
+    if (el) el.textContent = player.gold;
+}
+
+// Met à jour le bouton de construction de mine selon l'état du mode
+function updateMineButton() {
+    const btn = document.getElementById('mineBtn');
+    if (!btn) return;
+    if (buildMineMode) {
+        btn.classList.add('active');
+        btn.textContent = '🎯 Clique sur la carte pour placer la mine';
+    } else {
+        btn.classList.remove('active');
+        btn.textContent = `⛏️ Mine (${CONFIG.mineCostWood}🪵 + ${CONFIG.mineCostStone}🪨)`;
+        btn.disabled = player.wood < CONFIG.mineCostWood || player.stone < CONFIG.mineCostStone;
+    }
+}
+
+// ========================================
+// CHARBONNERIE
+// ========================================
+
+// Dessine une charbonnerie avec son sprite saisonnier, barre de progression et indicateurs
+function drawCharbonnerie(c) {
+    const pos = gridToIso(c.x, c.y);
+    const ox = canvas.width / 2, oy = 100;
+    const x  = pos.x + ox;
+    const y  = pos.y + oy;
+    const ts = CONFIG.tileSize;
+    const gy = y + ts / 4;
+
+    const sprite = getSprite('charbo');
+    if (sprite) {
+        const h = ts * 2.2;
+        const w = sprite.width * (h / sprite.height);
+        ctx.drawImage(sprite, x - w / 2, gy - h, w, h);
+
+        // Barre de progression (orange chaleur)
+        if (c.isWorking) {
+            const pct  = c.charboProgress / CONFIG.charboDuration;
+            const barW = 44, barX = x - barW / 2, barY = gy - h - 14;
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.beginPath(); ctx.roundRect(barX - 1, barY - 1, barW + 2, 7, 3); ctx.fill();
+            ctx.fillStyle = '#e06010';
+            ctx.beginPath(); ctx.roundRect(barX, barY, barW * pct, 5, 2); ctx.fill();
+            ctx.font = '10px Arial'; ctx.textAlign = 'center';
+            ctx.fillText('🔥 Carbonisation...', x, barY - 5);
+        }
+
+        // Indicateur bois stocké / charbon prêt
+        if (!c.isWorking && (c.woodStored > 0 || c.charboReady > 0)) {
+            const labelY = gy - h - 6;
+            ctx.fillStyle = 'rgba(20,10,5,0.65)';
+            ctx.beginPath(); ctx.roundRect(x - 36, labelY - 12, 72, 16, 5); ctx.fill();
+            ctx.fillStyle = c.charboReady > 0 ? '#ffe060' : '#ffffff';
+            ctx.font = '10px Arial'; ctx.textAlign = 'center';
+            const label = c.charboReady > 0
+                ? `✨ Charbon x${c.charboReady} prêt !`
+                : `🪵 Bois stocké : ${c.woodStored}`;
+            ctx.fillText(label, x, labelY - 3);
+        }
+        return;
+    }
+
+    // Fallback canvas si sprite absent
+    ctx.fillStyle = '#2a1a0a';
+    ctx.fillRect(x - 18, gy - 38, 36, 38);
+    ctx.fillStyle = '#1a0a00';
+    ctx.fillRect(x - 22, gy - 44, 44, 10);
+    ctx.font = '15px Arial'; ctx.textAlign = 'center';
+    ctx.fillText('🔥', x, gy - 20);
+}
+
+// Met à jour la production de chaque charbonnerie (bois → charbon)
+function updateCharbonneries() {
+    for (const c of charbonneries) {
+        if (c.isWorking) {
+            c.charboProgress++;
+            if (c.charboProgress >= CONFIG.charboDuration) {
+                // Fournée terminée !
+                c.woodStored    -= CONFIG.charboWoodPerBatch;
+                c.charboReady   += CONFIG.charboPerBatch;
+                c.isWorking      = false;
+                c.charboProgress = 0;
+                spawnPopup('🔥 Charbon prêt !', c.x, c.y);
+            }
+        } else {
+            // Relancer automatiquement si assez de bois stocké
+            if (c.woodStored >= CONFIG.charboWoodPerBatch) {
+                c.isWorking      = true;
+                c.charboProgress = 0;
+            }
+        }
+        if (c.depositCooldown > 0) c.depositCooldown--;
+    }
+}
+
+// Gère les interactions joueur ↔ charbonnerie (dépôt bois, récupération charbon)
+function checkCharboInteraction() {
+    for (const c of charbonneries) {
+        const dx = player.x - c.x;
+        const dy = player.y - c.y;
+        if (Math.sqrt(dx * dx + dy * dy) > 1.5) continue;
+
+        // Récupérer le charbon si prêt
+        if (c.charboReady > 0) {
+            player.charbon += c.charboReady;
+            spawnPopup(`+${c.charboReady} 🔥 Charbon !`, c.x, c.y);
+            c.charboReady = 0;
+            updateCharbonDisplay();
+        }
+
+        // Déposer du bois si le joueur en a et que la charbonnerie a de la place
+        if (player.wood > 0 && c.woodStored < CONFIG.charboMaxWood && c.depositCooldown <= 0) {
+            const toDeposit = Math.min(
+                player.wood,
+                CONFIG.charboWoodPerBatch,
+                CONFIG.charboMaxWood - c.woodStored
+            );
+            c.woodStored     += toDeposit;
+            player.wood      -= toDeposit;
+            c.depositCooldown = 300;
+            spawnPopup(`🪵 +${toDeposit} déposé`, c.x, c.y);
+            updateWoodDisplay();
+        }
+    }
+}
+
+// Met à jour l'affichage du charbon dans le header
+function updateCharbonDisplay() {
+    const el = document.getElementById('charbon');
+    if (el) el.textContent = player.charbon;
+}
+
+// Met à jour le bouton de construction de charbonnerie
+function updateCharboButton() {
+    const btn = document.getElementById('charboBtn');
+    if (!btn) return;
+    if (buildCharboMode) {
+        btn.classList.add('active');
+        btn.textContent = '🎯 Clique sur la carte pour placer la charbonnerie';
+    } else {
+        btn.classList.remove('active');
+        btn.textContent = `🔥 Charbonnerie (${CONFIG.charboCostWood}🪵 + ${CONFIG.charboCostStone}🪨)`;
+        btn.disabled = player.wood < CONFIG.charboCostWood || player.stone < CONFIG.charboCostStone;
+    }
+}
+
+// ========================================
+// FORGE
+// ========================================
+
+// Dessine une forge avec son sprite saisonnier, barre de progression et indicateurs
+function drawForge(f) {
+    const pos = gridToIso(f.x, f.y);
+    const ox = canvas.width / 2, oy = 100;
+    const x  = pos.x + ox;
+    const y  = pos.y + oy;
+    const ts = CONFIG.tileSize;
+    const gy = y + ts / 4;
+
+    const sprite = getSprite('forge');
+    if (sprite) {
+        const h = ts * 2.2;
+        const w = sprite.width * (h / sprite.height);
+        ctx.drawImage(sprite, x - w / 2, gy - h, w, h);
+
+        // Barre de progression (rouge/orange métal en fusion)
+        if (f.isWorking) {
+            const pct  = f.forgeProgress / CONFIG.forgeDuration;
+            const barW = 44, barX = x - barW / 2, barY = gy - h - 14;
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.beginPath(); ctx.roundRect(barX - 1, barY - 1, barW + 2, 7, 3); ctx.fill();
+            ctx.fillStyle = '#cc3300';
+            ctx.beginPath(); ctx.roundRect(barX, barY, barW * pct, 5, 2); ctx.fill();
+            ctx.font = '10px Arial'; ctx.textAlign = 'center';
+            ctx.fillText('⚒️ Forgeage...', x, barY - 5);
+        }
+
+        // Indicateur ressources stockées / lingots prêts
+        if (!f.isWorking && (f.ironStored > 0 || f.charboStored > 0 || f.lingotsReady > 0)) {
+            const labelY = gy - h - 6;
+            ctx.fillStyle = 'rgba(20,10,5,0.65)';
+            ctx.beginPath(); ctx.roundRect(x - 40, labelY - 12, 80, 16, 5); ctx.fill();
+            ctx.fillStyle = f.lingotsReady > 0 ? '#ffe060' : '#ffffff';
+            ctx.font = '10px Arial'; ctx.textAlign = 'center';
+            const label = f.lingotsReady > 0
+                ? `✨ Lingot x${f.lingotsReady} prêt !`
+                : `⚙️${f.ironStored} 🔥${f.charboStored}`;
+            ctx.fillText(label, x, labelY - 3);
+        }
+        return;
+    }
+
+    // Fallback canvas si sprite absent
+    ctx.fillStyle = '#3a1a0a';
+    ctx.fillRect(x - 18, gy - 38, 36, 38);
+    ctx.fillStyle = '#cc3300';
+    ctx.fillRect(x - 22, gy - 44, 44, 10);
+    ctx.font = '15px Arial'; ctx.textAlign = 'center';
+    ctx.fillText('⚒️', x, gy - 20);
+}
+
+// Met à jour la production de chaque forge (fer + charbon → lingots)
+function updateForges() {
+    for (const f of forges) {
+        if (f.isWorking) {
+            f.forgeProgress++;
+            if (f.forgeProgress >= CONFIG.forgeDuration) {
+                // Fournée terminée !
+                f.ironStored    -= CONFIG.forgeIronPerBatch;
+                f.charboStored  -= CONFIG.forgeCharboPerBatch;
+                f.lingotsReady  += CONFIG.forgeLingotsPerBatch;
+                f.isWorking      = false;
+                f.forgeProgress  = 0;
+                spawnPopup('⚒️ Lingot prêt !', f.x, f.y);
+            }
+        } else {
+            // Relancer automatiquement si assez de ressources
+            if (f.ironStored >= CONFIG.forgeIronPerBatch && f.charboStored >= CONFIG.forgeCharboPerBatch) {
+                f.isWorking     = true;
+                f.forgeProgress = 0;
+            }
+        }
+        if (f.depositCooldown > 0) f.depositCooldown--;
+    }
+}
+
+// Gère les interactions joueur ↔ forge (dépôt fer + charbon, récupération lingots)
+function checkForgeInteraction() {
+    for (const f of forges) {
+        const dx = player.x - f.x;
+        const dy = player.y - f.y;
+        if (Math.sqrt(dx * dx + dy * dy) > 1.5) continue;
+
+        // Récupérer les lingots si prêts
+        if (f.lingotsReady > 0) {
+            player.lingots += f.lingotsReady;
+            spawnPopup(`+${f.lingotsReady} ⚒️ Lingot(s) !`, f.x, f.y);
+            f.lingotsReady = 0;
+            updateLingotsDisplay();
+        }
+
+        if (f.depositCooldown > 0) continue;
+
+        // Déposer du fer si le joueur en a et que la forge a de la place
+        if (player.iron > 0 && f.ironStored < CONFIG.forgeMaxIron) {
+            const toDeposit = Math.min(player.iron, CONFIG.forgeIronPerBatch, CONFIG.forgeMaxIron - f.ironStored);
+            f.ironStored      += toDeposit;
+            player.iron       -= toDeposit;
+            f.depositCooldown  = 300;
+            spawnPopup(`⚙️ +${toDeposit} fer déposé`, f.x, f.y);
+            updateIronDisplay();
+        }
+
+        // Déposer du charbon si le joueur en a et que la forge a de la place
+        if (player.charbon > 0 && f.charboStored < CONFIG.forgeMaxCharbo) {
+            const toDeposit = Math.min(player.charbon, CONFIG.forgeCharboPerBatch, CONFIG.forgeMaxCharbo - f.charboStored);
+            f.charboStored    += toDeposit;
+            player.charbon    -= toDeposit;
+            f.depositCooldown  = 300;
+            spawnPopup(`🔥 +${toDeposit} charbon déposé`, f.x, f.y);
+            updateCharbonDisplay();
+        }
+    }
+}
+
+// Met à jour l'affichage des lingots dans le header
+function updateLingotsDisplay() {
+    const el = document.getElementById('lingots');
+    if (el) el.textContent = player.lingots;
+}
+
+// Met à jour le bouton de construction de forge
+function updateForgeButton() {
+    const btn = document.getElementById('forgeBtn');
+    if (!btn) return;
+    if (buildForgeMode) {
+        btn.classList.add('active');
+        btn.textContent = '🎯 Clique sur la carte pour placer la forge';
+    } else {
+        btn.classList.remove('active');
+        btn.textContent = `⚒️ Forge (${CONFIG.forgeCostWood}🪵 + ${CONFIG.forgeCostStone}🪨)`;
+        btn.disabled = player.wood < CONFIG.forgeCostWood || player.stone < CONFIG.forgeCostStone;
+    }
+}
+
+// ========================================
+// GRENIER
+// ========================================
+
+// Dessine un grenier avec son sprite saisonnier et indicateur de stock
+function drawGrenier(g) {
+    const pos = gridToIso(g.x, g.y);
+    const ox = canvas.width / 2, oy = 100;
+    const x  = pos.x + ox;
+    const y  = pos.y + oy;
+    const ts = CONFIG.tileSize;
+    const gy = y + ts / 4;
+
+    const sprite = getSprite('grenier');
+    if (sprite) {
+        const h = ts * 2.2;
+        const w = sprite.width * (h / sprite.height);
+        ctx.drawImage(sprite, x - w / 2, gy - h, w, h);
+
+        // Indicateur de stock (blé + farine)
+        const total = g.wheatStored + g.flourStored;
+        if (total > 0) {
+            const labelY = gy - h - 6;
+            ctx.fillStyle = 'rgba(20,15,5,0.65)';
+            ctx.beginPath(); ctx.roundRect(x - 38, labelY - 12, 76, 16, 5); ctx.fill();
+            ctx.fillStyle = '#ffe060';
+            ctx.font = '10px Arial'; ctx.textAlign = 'center';
+            const parts = [];
+            if (g.wheatStored > 0) parts.push(`🌾${g.wheatStored}`);
+            if (g.flourStored > 0) parts.push(`🌾→${g.flourStored}`);
+            ctx.fillText(parts.join(' '), x, labelY - 3);
+        }
+        return;
+    }
+
+    // Fallback canvas si sprite absent
+    ctx.fillStyle = '#c8902a';
+    ctx.fillRect(x - 18, gy - 38, 36, 38);
+    ctx.fillStyle = '#a87020';
+    ctx.fillRect(x - 22, gy - 44, 44, 10);
+    ctx.font = '15px Arial'; ctx.textAlign = 'center';
+    ctx.fillText('🌾', x, gy - 20);
+}
+
+// Gère les interactions joueur ↔ grenier (dépôt et retrait blé/farine)
+function checkGrenierInteraction() {
+    for (const g of greniers) {
+        const dx = player.x - g.x;
+        const dy = player.y - g.y;
+        if (Math.sqrt(dx * dx + dy * dy) > 1.5) continue;
+
+        if (g.depositCooldown > 0) { g.depositCooldown--; continue; }
+
+        // Retrait : prendre tout si le joueur n'a rien
+        if (player.wheat === 0 && g.wheatStored > 0) {
+            player.wheat  += g.wheatStored;
+            spawnPopup(`+${g.wheatStored}🌾 récupéré`, g.x, g.y);
+            g.wheatStored  = 0;
+            g.depositCooldown = 180;
+            updateWheatDisplay();
+            continue;
+        }
+        if (player.flour === 0 && g.flourStored > 0) {
+            player.flour  += g.flourStored;
+            spawnPopup(`+${g.flourStored}🌾→ farine récupérée`, g.x, g.y);
+            g.flourStored  = 0;
+            g.depositCooldown = 180;
+            updateFlourDisplay();
+            continue;
+        }
+
+        // Dépôt : stocker l'excédent si le grenier a de la place
+        if (player.wheat > 0 && g.wheatStored < CONFIG.grenierMaxWheat) {
+            const toStore = Math.min(player.wheat, CONFIG.grenierMaxWheat - g.wheatStored);
+            g.wheatStored  += toStore;
+            player.wheat   -= toStore;
+            g.depositCooldown = 300;
+            spawnPopup(`🌾 +${toStore} stocké`, g.x, g.y);
+            updateWheatDisplay();
+        } else if (player.flour > 0 && g.flourStored < CONFIG.grenierMaxFlour) {
+            const toStore = Math.min(player.flour, CONFIG.grenierMaxFlour - g.flourStored);
+            g.flourStored  += toStore;
+            player.flour   -= toStore;
+            g.depositCooldown = 300;
+            spawnPopup(`🌾→ +${toStore} farine stockée`, g.x, g.y);
+            updateFlourDisplay();
+        }
+    }
+}
+
+// Met à jour le bouton de construction de grenier
+function updateGrenierButton() {
+    const btn = document.getElementById('grenierBtn');
+    if (!btn) return;
+    if (buildGrenierMode) {
+        btn.classList.add('active');
+        btn.textContent = '🎯 Clique sur la carte pour placer le grenier';
+    } else {
+        btn.classList.remove('active');
+        btn.textContent = `🌾 Grenier (${CONFIG.grenierCostWood}🪵 + ${CONFIG.grenierCostStone}🪨)`;
+        btn.disabled = player.wood < CONFIG.grenierCostWood || player.stone < CONFIG.grenierCostStone;
+    }
+}
+
+// ========================================
+// MOUTONS
+// ========================================
+
+// Dessine un mouton avec son sprite (ou fallback emoji)
+function drawSheep(s) {
+    const pos = gridToIso(s.x, s.y);
+    const x   = pos.x + canvas.width / 2;
+    const y   = pos.y + 100 + CONFIG.tileSize / 4;
+    const ts  = CONFIG.tileSize;
+
+    // Légère oscillation verticale si en mouvement
+    const bounce = s.isMoving ? Math.sin(s.walkCycle * 8) * 1.5 : 0;
+
+    if (moutonSprite) {
+        const h = ts * 0.85;
+        const w = moutonSprite.width * (h / moutonSprite.height);
+        ctx.drawImage(moutonSprite, x - w / 2, y - h - bounce, w, h);
+    } else {
+        // Fallback emoji
+        ctx.font = `${Math.max(14, ts * 0.5)}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🐑', x, y - bounce);
+    }
+
+    // Indicateur laine prête (depuis la ferme liée)
+    if (s.hasWool) {
+        ctx.font = '12px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🧶', x + ts * 0.3, y - ts * 0.6 - bounce);
+    }
+}
+
+// Met à jour le déplacement de chaque mouton (vagabondage autour de sa ferme)
+function updateSheep() {
+    for (const s of sheep) {
+        // Déplacement vers la cible
+        const dx = s.targetX - s.x;
+        const dy = s.targetY - s.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        s.isMoving = dist > 0.05;
+
+        if (s.isMoving) {
+            const speed = CONFIG.playerSpeed * 0.35;
+            s.x += (dx / dist) * speed;
+            s.y += (dy / dist) * speed;
+            if (Math.abs(s.x - s.targetX) < 0.1) s.x = s.targetX;
+            if (Math.abs(s.y - s.targetY) < 0.1) s.y = s.targetY;
+            s.walkCycle += 0.08;
+        } else {
+            s.walkCycle *= 0.9;
+            s.waitTimer--;
+            if (s.waitTimer <= 0) {
+                // Choisir nouvelle destination autour de la ferme (rayon 3)
+                const radius = 3;
+                let nx = Math.round(s.ferme.x + (Math.random() * 2 - 1) * radius);
+                let ny = Math.round(s.ferme.y + (Math.random() * 2 - 1) * radius);
+                nx = Math.max(0, Math.min(CONFIG.worldWidth - 1, nx));
+                ny = Math.max(0, Math.min(CONFIG.worldHeight - 1, ny));
+                if (!riverTileSet.has(`${nx},${ny}`)) {
+                    s.targetX = nx;
+                    s.targetY = ny;
+                }
+                s.waitTimer = 90 + Math.floor(Math.random() * 150);
+            }
+        }
+
+        // hasWool = vrai si la ferme liée a de la laine stockée
+        s.hasWool = (s.ferme.laineStored > 0);
+    }
+}
+
+// ========================================
+// SÉCHOIR
+// ========================================
+
+// Dessine un séchoir avec son sprite saisonnier, barre de progression et indicateurs
+function drawSechoir(s) {
+    const pos = gridToIso(s.x, s.y);
+    const ox = canvas.width / 2, oy = 100;
+    const x  = pos.x + ox;
+    const y  = pos.y + oy;
+    const ts = CONFIG.tileSize;
+    const gy = y + ts / 4;
+
+    const sprite = getSprite('sechoir');
+    if (sprite) {
+        const h = ts * 2.2;
+        const w = sprite.width * (h / sprite.height);
+        ctx.drawImage(sprite, x - w / 2, gy - h, w, h);
+
+        // Barre de progression (bleu-vert séchage)
+        if (s.isWorking) {
+            const pct  = s.dryProgress / CONFIG.sechoirDuration;
+            const barW = 44, barX = x - barW / 2, barY = gy - h - 14;
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.beginPath(); ctx.roundRect(barX - 1, barY - 1, barW + 2, 7, 3); ctx.fill();
+            ctx.fillStyle = '#20a870';
+            ctx.beginPath(); ctx.roundRect(barX, barY, barW * pct, 5, 2); ctx.fill();
+            ctx.font = '10px Arial'; ctx.textAlign = 'center';
+            ctx.fillText('💨 Séchage...', x, barY - 5);
+        }
+
+        // Poisson séché prêt : afficher le sprite poisson_seche au sol devant le bâtiment
+        if (s.driedReady > 0) {
+            const iconSize = ts * 0.7;
+            if (poissonSecheSprite) {
+                const iw = poissonSecheSprite.width * (iconSize / poissonSecheSprite.height);
+                ctx.drawImage(poissonSecheSprite, x + ts * 0.2, gy - iconSize * 0.8, iw, iconSize);
+            } else {
+                ctx.font = `${Math.max(14, ts * 0.5)}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.fillText('🐟', x + ts * 0.4, gy - iconSize * 0.3);
+            }
+            // Compteur
+            ctx.fillStyle = '#ffe060';
+            ctx.font = `bold ${Math.max(10, ts * 0.35)}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(`×${s.driedReady}`, x + ts * 0.55, gy - iconSize * 0.8);
+            ctx.textBaseline = 'alphabetic';
+        } else if (s.fishStored > 0) {
+            // Poisson brut déposé
+            const labelY = gy - h - 6;
+            ctx.fillStyle = 'rgba(10,25,20,0.65)';
+            ctx.beginPath(); ctx.roundRect(x - 32, labelY - 12, 64, 16, 5); ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '10px Arial'; ctx.textAlign = 'center';
+            ctx.fillText(`🐟 ×${s.fishStored}`, x, labelY - 3);
+        }
+        return;
+    }
+
+    // Fallback canvas
+    ctx.fillStyle = '#3a5a4a';
+    ctx.fillRect(x - 18, gy - 38, 36, 38);
+    ctx.fillStyle = '#1a3a2a';
+    ctx.fillRect(x - 22, gy - 44, 44, 10);
+    ctx.font = '15px Arial'; ctx.textAlign = 'center';
+    ctx.fillText('🐟', x, gy - 20);
+}
+
+// Met à jour la production de chaque séchoir (poisson cru → poisson séché)
+function updateSechoirs() {
+    for (const s of sechoirs) {
+        if (s.isWorking) {
+            s.dryProgress++;
+            if (s.dryProgress >= CONFIG.sechoirDuration) {
+                // Fournée terminée !
+                s.fishStored  -= CONFIG.sechoirFishPerBatch;
+                s.driedReady  += CONFIG.sechoirDriedPerBatch;
+                s.isWorking    = false;
+                s.dryProgress  = 0;
+                spawnPopup('💨 Poisson séché prêt !', s.x, s.y);
+            }
+        } else {
+            if (s.fishStored >= CONFIG.sechoirFishPerBatch) {
+                s.isWorking   = true;
+                s.dryProgress = 0;
+            }
+        }
+        if (s.depositCooldown > 0) s.depositCooldown--;
+    }
+}
+
+// Gère les interactions joueur ↔ séchoir (dépôt poisson, récupération poisson séché)
+function checkSechoirInteraction() {
+    for (const s of sechoirs) {
+        const dx = player.x - s.x;
+        const dy = player.y - s.y;
+        if (Math.sqrt(dx * dx + dy * dy) > 1.5) continue;
+
+        // Récupérer le poisson séché si prêt
+        if (s.driedReady > 0) {
+            player.driedFish += s.driedReady;
+            spawnPopup(`+${s.driedReady} 🐟 Séché !`, s.x, s.y);
+            s.driedReady = 0;
+            updateDriedFishDisplay();
+        }
+
+        // Déposer du poisson cru
+        if (player.fish > 0 && s.fishStored < CONFIG.sechoirMaxFish && s.depositCooldown <= 0) {
+            const toDeposit = Math.min(
+                player.fish,
+                CONFIG.sechoirFishPerBatch,
+                CONFIG.sechoirMaxFish - s.fishStored
+            );
+            s.fishStored     += toDeposit;
+            player.fish      -= toDeposit;
+            s.depositCooldown = 300;
+            spawnPopup(`🐟 +${toDeposit} déposé`, s.x, s.y);
+            updateFishDisplay();
+        }
+    }
+}
+
+// Met à jour l'affichage du poisson séché dans le header
+function updateDriedFishDisplay() {
+    const el = document.getElementById('driedFish');
+    if (el) el.textContent = player.driedFish;
+}
+
+// Met à jour le bouton de construction de séchoir
+function updateSechoirButton() {
+    const btn = document.getElementById('sechoirBtn');
+    if (!btn) return;
+    if (buildSechoirMode) {
+        btn.classList.add('active');
+        btn.textContent = '🎯 Clique sur la carte pour placer le séchoir';
+    } else {
+        btn.classList.remove('active');
+        btn.textContent = `💨 Séchoir (${CONFIG.sechoirCostWood}🪵 + ${CONFIG.sechoirCostStone}🪨)`;
+        btn.disabled = player.wood < CONFIG.sechoirCostWood || player.stone < CONFIG.sechoirCostStone;
+    }
+}
+
+// ========================================
+// FERME
+// ========================================
+
+// Dessine une ferme avec son sprite saisonnier et indicateurs de stock
+function drawFerme(f) {
+    const pos = gridToIso(f.x, f.y);
+    const ox = canvas.width / 2, oy = 100;
+    const x  = pos.x + ox;
+    const y  = pos.y + oy;
+    const ts = CONFIG.tileSize;
+    const gy = y + ts / 4;
+
+    const sprite = getSprite('ferme');
+    if (sprite) {
+        const h = ts * 2.2;
+        const w = sprite.width * (h / sprite.height);
+        ctx.drawImage(sprite, x - w / 2, gy - h, w, h);
+
+        // Barre de production (rose/beige)
+        const pct = f.prodTimer / CONFIG.fermeDuration;
+        const barW = 44, barX = x - barW / 2, barY = gy - h - 14;
+        ctx.fillStyle = 'rgba(0,0,0,0.4)';
+        ctx.beginPath(); ctx.roundRect(barX - 1, barY - 1, barW + 2, 7, 3); ctx.fill();
+        ctx.fillStyle = '#e09060';
+        ctx.beginPath(); ctx.roundRect(barX, barY, barW * pct, 5, 2); ctx.fill();
+
+        // Sprite laine au sol si laine stockée
+        if (f.laineStored > 0) {
+            const iconSize = ts * 0.65;
+            if (laineSprite) {
+                const iw = laineSprite.width * (iconSize / laineSprite.height);
+                ctx.drawImage(laineSprite, x - ts * 0.55, gy - iconSize * 0.7, iw, iconSize);
+            } else {
+                ctx.font = `${Math.max(14, ts * 0.5)}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.fillText('🧶', x - ts * 0.3, gy - iconSize * 0.2);
+            }
+            ctx.fillStyle = '#ffe060';
+            ctx.font = `bold ${Math.max(10, ts * 0.35)}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(`×${f.laineStored}`, x - ts * 0.1, gy - iconSize * 0.7);
+            ctx.textBaseline = 'alphabetic';
+        }
+        // Viande : emoji au sol si viande stockée
+        if (f.viandeStored > 0) {
+            ctx.font = `${Math.max(14, ts * 0.5)}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(`🥩×${f.viandeStored}`, x + ts * 0.5, gy - ts * 0.4);
+            ctx.textBaseline = 'alphabetic';
+        }
+        return;
+    }
+
+    // Fallback canvas
+    ctx.fillStyle = '#c87040';
+    ctx.fillRect(x - 18, gy - 38, 36, 38);
+    ctx.fillStyle = '#a05020';
+    ctx.fillRect(x - 22, gy - 44, 44, 10);
+    ctx.font = '15px Arial'; ctx.textAlign = 'center';
+    ctx.fillText('🐑', x, gy - 20);
+}
+
+// Met à jour la production passive de chaque ferme (laine + viande)
+function updateFermes() {
+    for (const f of fermes) {
+        f.prodTimer++;
+        if (f.prodTimer >= CONFIG.fermeDuration) {
+            f.prodTimer = 0;
+            if (f.laineStored  < CONFIG.fermeMaxLaine)  f.laineStored++;
+            if (f.viandeStored < CONFIG.fermeMaxViande) f.viandeStored++;
+            if (f.laineStored > 0 || f.viandeStored > 0) {
+                spawnPopup('🐑 Récolte prête !', f.x, f.y);
+            }
+        }
+    }
+}
+
+// Gère les interactions joueur ↔ ferme (collecte laine et viande)
+function checkFermeInteraction() {
+    for (const f of fermes) {
+        const dx = player.x - f.x;
+        const dy = player.y - f.y;
+        if (Math.sqrt(dx * dx + dy * dy) > 1.5) continue;
+
+        if (f.laineStored > 0) {
+            player.laine  += f.laineStored;
+            spawnPopup(`+${f.laineStored} 🧶 Laine !`, f.x, f.y);
+            f.laineStored  = 0;
+            updateLaineDisplay();
+        }
+        if (f.viandeStored > 0) {
+            player.viande  += f.viandeStored;
+            spawnPopup(`+${f.viandeStored} 🥩 Viande !`, f.x, f.y);
+            f.viandeStored  = 0;
+            updateViandeDisplay();
+        }
+    }
+}
+
+// Met à jour l'affichage de la laine dans le header
+function updateLaineDisplay() {
+    const el = document.getElementById('laine');
+    if (el) el.textContent = player.laine;
+}
+
+// Met à jour l'affichage de la viande dans le header
+function updateViandeDisplay() {
+    const el = document.getElementById('viande');
+    if (el) el.textContent = player.viande;
+}
+
+// Met à jour le bouton de construction de ferme
+function updateFermeButton() {
+    const btn = document.getElementById('fermeBtn');
+    if (!btn) return;
+    if (buildFermeMode) {
+        btn.classList.add('active');
+        btn.textContent = '🎯 Clique sur la carte pour placer la ferme';
+    } else {
+        btn.classList.remove('active');
+        btn.textContent = `🐑 Ferme (${CONFIG.fermeCostWood}🪵 + ${CONFIG.fermeCostStone}🪨)`;
+        btn.disabled = player.wood < CONFIG.fermeCostWood || player.stone < CONFIG.fermeCostStone;
+    }
+}
+
+// ========================================
+// MARCHÉ
+// ========================================
+
+// Les types de livraisons possibles au marché (choix aléatoire à chaque cycle)
+const MARCHE_TRADES = [
+    { label: '3 🪵 Bois',    fn: () => { player.wood  += 3; updateWoodDisplay();  } },
+    { label: '2 🪨 Pierre',  fn: () => { player.stone += 2; updateStoneDisplay(); } },
+    { label: '3 🌾 Blé',     fn: () => { player.wheat += 3; updateWheatDisplay(); } },
+    { label: '2 🐟 Poisson', fn: () => { player.fish  += 2; updateFishDisplay();  } },
+    { label: '2 🪵→ Planches', fn: () => { player.planks += 2; updatePlanksDisplay(); } },
+];
+
+// Dessine un marché avec son sprite saisonnier et indicateur de livraisons en attente
+function drawMarche(m) {
+    const pos = gridToIso(m.x, m.y);
+    const ox = canvas.width / 2, oy = 100;
+    const x  = pos.x + ox;
+    const y  = pos.y + oy;
+    const ts = CONFIG.tileSize;
+    const gy = y + ts / 4;
+
+    const sprite = getSprite('marche');
+    if (sprite) {
+        const h = ts * 2.2;
+        const w = sprite.width * (h / sprite.height);
+        ctx.drawImage(sprite, x - w / 2, gy - h, w, h);
+
+        // Barre de progression vers prochaine livraison
+        const pct = m.tradeTimer / CONFIG.marcheDuration;
+        const barW = 44, barX = x - barW / 2, barY = gy - h - 14;
+        ctx.fillStyle = 'rgba(0,0,0,0.4)';
+        ctx.beginPath(); ctx.roundRect(barX - 1, barY - 1, barW + 2, 7, 3); ctx.fill();
+        ctx.fillStyle = '#f0c030';
+        ctx.beginPath(); ctx.roundRect(barX, barY, barW * pct, 5, 2); ctx.fill();
+
+        // Indicateur livraisons en attente
+        if (m.stock.length > 0) {
+            const labelY = gy - h - 6;
+            ctx.fillStyle = 'rgba(20,15,5,0.65)';
+            ctx.beginPath(); ctx.roundRect(x - 42, labelY - 12, 84, 16, 5); ctx.fill();
+            ctx.fillStyle = '#ffe060';
+            ctx.font = '10px Arial'; ctx.textAlign = 'center';
+            ctx.fillText(`📦 ${m.stock.length} livraison(s) !`, x, labelY - 3);
+        }
+        return;
+    }
+
+    // Fallback canvas
+    ctx.fillStyle = '#c0a030';
+    ctx.fillRect(x - 18, gy - 38, 36, 38);
+    ctx.fillStyle = '#a08010';
+    ctx.fillRect(x - 22, gy - 44, 44, 10);
+    ctx.font = '15px Arial'; ctx.textAlign = 'center';
+    ctx.fillText('🏪', x, gy - 20);
+}
+
+// Met à jour les marchés (génère des livraisons aléatoires périodiquement)
+function updateMarches() {
+    for (const m of marches) {
+        m.tradeTimer++;
+        if (m.tradeTimer >= CONFIG.marcheDuration) {
+            m.tradeTimer = 0;
+            if (m.stock.length < CONFIG.marcheMaxStock) {
+                const trade = MARCHE_TRADES[Math.floor(Math.random() * MARCHE_TRADES.length)];
+                m.stock.push({ label: trade.label, fn: trade.fn });
+                spawnPopup('📦 Livraison au marché !', m.x, m.y);
+            }
+        }
+    }
+}
+
+// Gère les interactions joueur ↔ marché (collecte des livraisons)
+function checkMarcheInteraction() {
+    for (const m of marches) {
+        const dx = player.x - m.x;
+        const dy = player.y - m.y;
+        if (Math.sqrt(dx * dx + dy * dy) > 1.5) continue;
+        if (m.stock.length === 0) continue;
+
+        // Collecter toutes les livraisons en attente
+        const collected = m.stock.splice(0, m.stock.length);
+        collected.forEach(trade => {
+            trade.fn();
+            spawnPopup(`+${trade.label}`, m.x, m.y);
+        });
+    }
+}
+
+// Met à jour le bouton de construction de marché
+function updateMarcheButton() {
+    const btn = document.getElementById('marcheBtn');
+    if (!btn) return;
+    if (buildMarcheMode) {
+        btn.classList.add('active');
+        btn.textContent = '🎯 Clique sur la carte pour placer le marché';
+    } else {
+        btn.classList.remove('active');
+        btn.textContent = `🏪 Marché (${CONFIG.marcheCostWood}🪵 + ${CONFIG.marcheCostStone}🪨)`;
+        btn.disabled = player.wood < CONFIG.marcheCostWood || player.stone < CONFIG.marcheCostStone;
+    }
+}
+
+// ========================================
 // HABITANTS
 // ========================================
 
@@ -3216,6 +4544,7 @@ function spawnHabitant(shelter) {
         color,
         gatherCooldown: 0
     });
+    spawnPopup('👤 Un habitant arrive !', sx, sy);
     updateHabitantDisplay();
 }
 
@@ -3231,14 +4560,18 @@ function updateHabitants() {
     for (let i = habitants.length - 1; i >= 0; i--) {
         const h = habitants[i];
 
-        // --- Mouvement ---
+        // --- Mouvement à vitesse constante ---
         const dx = h.targetX - h.x;
         const dy = h.targetY - h.y;
-        h.isMoving = Math.abs(dx) > 0.05 || Math.abs(dy) > 0.05;
+        const distToTarget = Math.sqrt(dx * dx + dy * dy);
+        h.isMoving = distToTarget > 0.05;
 
         if (h.isMoving) {
-            h.x += dx * CONFIG.playerSpeed * 0.55;
-            h.y += dy * CONFIG.playerSpeed * 0.55;
+            // Vitesse constante (direction normalisée)
+            const speed = CONFIG.playerSpeed * 0.55;
+            h.x += (dx / distToTarget) * speed;
+            h.y += (dy / distToTarget) * speed;
+            // Snap quand on est très proche pour éviter les oscillations
             if (Math.abs(h.x - h.targetX) < 0.1) h.x = h.targetX;
             if (Math.abs(h.y - h.targetY) < 0.1) h.y = h.targetY;
             h.walkCycle += 0.12;
@@ -3250,12 +4583,13 @@ function updateHabitants() {
                 const r = CONFIG.habitantWanderRadius;
                 const nx = Math.round(h.shelter.x + (Math.random() * 2 - 1) * r);
                 const ny = Math.round(h.shelter.y + (Math.random() * 2 - 1) * r);
-                if (nx >= 0 && nx < CONFIG.worldWidth && ny >= 0 && ny < CONFIG.worldHeight) {
-                    const hasBridge = bridges.some(b => b.x === nx && b.y === ny);
-                    if (!riverTileSet.has(`${nx},${ny}`) || hasBridge) {
-                        h.targetX = nx;
-                        h.targetY = ny;
-                    }
+                // Limiter aux bords du monde
+                const clampedNx = Math.max(0, Math.min(CONFIG.worldWidth - 1, nx));
+                const clampedNy = Math.max(0, Math.min(CONFIG.worldHeight - 1, ny));
+                const hasBridge = bridges.some(b => b.x === clampedNx && b.y === clampedNy);
+                if (!riverTileSet.has(`${clampedNx},${clampedNy}`) || hasBridge) {
+                    h.targetX = clampedNx;
+                    h.targetY = clampedNy;
                 }
                 h.waitTimer = 120 + Math.floor(Math.random() * 200);
             }
@@ -3472,6 +4806,18 @@ function eatFood() {
         SOUNDS.eat();
         spawnPopup(`+${CONFIG.hungerFromBread} 🍞 Délicieux !`, player.x, player.y);
         updateBreadDisplay();
+    } else if (player.driedFish > 0) {
+        player.driedFish--;
+        player.hunger = Math.min(100, player.hunger + CONFIG.hungerFromDriedFish);
+        SOUNDS.eat();
+        spawnPopup(`+${CONFIG.hungerFromDriedFish} 🐟 Poisson séché !`, player.x, player.y);
+        updateDriedFishDisplay();
+    } else if (player.viande > 0) {
+        player.viande--;
+        player.hunger = Math.min(100, player.hunger + CONFIG.hungerFromMeat);
+        SOUNDS.eat();
+        spawnPopup(`+${CONFIG.hungerFromMeat} 🥩 Viande !`, player.x, player.y);
+        updateViandeDisplay();
     } else if (player.fish > 0) {
         player.fish--;
         player.hunger = Math.min(100, player.hunger + CONFIG.hungerFromRawFish);
@@ -3810,6 +5156,54 @@ function gameLoop() {
     // Mettre à jour les moulins (rotation + production)
     updateMills();
 
+    // Mettre à jour les scieries (sciage bois → planches)
+    updateSawyers();
+
+    // Vérifier les interactions joueur ↔ scierie
+    checkSawyerInteraction();
+
+    // Mettre à jour les mines (extraction continue de minerais)
+    updateMines();
+
+    // Vérifier les interactions joueur ↔ mine (collecte minerais)
+    checkMineInteraction();
+
+    // Mettre à jour les charbonneries (bois → charbon)
+    updateCharbonneries();
+
+    // Vérifier les interactions joueur ↔ charbonnerie
+    checkCharboInteraction();
+
+    // Mettre à jour les forges (fer + charbon → lingots)
+    updateForges();
+
+    // Vérifier les interactions joueur ↔ forge
+    checkForgeInteraction();
+
+    // Vérifier les interactions joueur ↔ grenier (dépôt / retrait blé / farine)
+    checkGrenierInteraction();
+
+    // Mettre à jour les séchoirs (poisson cru → poisson séché)
+    updateSechoirs();
+
+    // Vérifier les interactions joueur ↔ séchoir
+    checkSechoirInteraction();
+
+    // Mettre à jour les fermes (production passive laine + viande)
+    updateFermes();
+
+    // Vérifier les interactions joueur ↔ ferme (collecte)
+    checkFermeInteraction();
+
+    // Mettre à jour les marchés (livraisons périodiques)
+    updateMarches();
+
+    // Vérifier les interactions joueur ↔ marché (collecte livraisons)
+    checkMarcheInteraction();
+
+    // Mettre à jour les moutons (déplacement autour des fermes)
+    updateSheep();
+
     // Mettre à jour les habitants (déplacement, collecte, nourriture)
     updateHabitants();
 
@@ -3867,6 +5261,15 @@ function gameLoop() {
         ...shelters.map(s   => ({ type: 'shelter',  data: s, depth: s.x + s.y })),
         ...palisades.map(p  => ({ type: 'palisade', data: p, depth: p.x + p.y })),
         ...towers.map(t     => ({ type: 'tower',    data: t, depth: t.x + t.y })),
+        ...sawyers.map(s    => ({ type: 'sawyer',       data: s, depth: s.x + s.y })),
+        ...mines.map(m      => ({ type: 'mine',         data: m, depth: m.x + m.y })),
+        ...charbonneries.map(c => ({ type: 'charbo',   data: c, depth: c.x + c.y })),
+        ...forges.map(f     => ({ type: 'forge',        data: f, depth: f.x + f.y })),
+        ...greniers.map(g   => ({ type: 'grenier',      data: g, depth: g.x + g.y })),
+        ...sechoirs.map(s   => ({ type: 'sechoir',      data: s, depth: s.x + s.y })),
+        ...fermes.map(f     => ({ type: 'ferme',         data: f, depth: f.x + f.y })),
+        ...marches.map(m    => ({ type: 'marche',        data: m, depth: m.x + m.y })),
+        ...sheep.map(s      => ({ type: 'sheep',         data: s, depth: s.x + s.y })),
         ...mills.map(m      => ({ type: 'mill',      data: m, depth: m.x + m.y })),
         ...bakeries.map(b   => ({ type: 'bakery',   data: b, depth: b.x + b.y })),
         ...campfires.map(c  => ({ type: 'campfire', data: c, depth: c.x + c.y })),
@@ -3883,6 +5286,15 @@ function gameLoop() {
         else if (entity.type === 'shelter')  drawShelter(entity.data);
         else if (entity.type === 'palisade') drawPalisade(entity.data);
         else if (entity.type === 'tower')    drawTower(entity.data);
+        else if (entity.type === 'sawyer')   drawSawyer(entity.data);
+        else if (entity.type === 'mine')     drawMine(entity.data);
+        else if (entity.type === 'charbo')   drawCharbonnerie(entity.data);
+        else if (entity.type === 'forge')    drawForge(entity.data);
+        else if (entity.type === 'grenier')  drawGrenier(entity.data);
+        else if (entity.type === 'sechoir')  drawSechoir(entity.data);
+        else if (entity.type === 'ferme')    drawFerme(entity.data);
+        else if (entity.type === 'marche')   drawMarche(entity.data);
+        else if (entity.type === 'sheep')    drawSheep(entity.data);
         else if (entity.type === 'mill')      drawMill(entity.data);
         else if (entity.type === 'bakery')   drawBakery(entity.data);
         else if (entity.type === 'campfire') drawCampfire(entity.data);
@@ -4247,6 +5659,54 @@ canvas.addEventListener('click', (e) => {
                 if (towerIdx !== -1) { towers.splice(towerIdx, 1); demolished = true; }
             }
 
+            // Chercher une scierie
+            if (!demolished) {
+                const sawIdx = sawyers.findIndex(s => s.x === gridPos.x && s.y === gridPos.y);
+                if (sawIdx !== -1) { sawyers.splice(sawIdx, 1); demolished = true; }
+            }
+
+            // Chercher une mine
+            if (!demolished) {
+                const mineIdx = mines.findIndex(m => m.x === gridPos.x && m.y === gridPos.y);
+                if (mineIdx !== -1) { mines.splice(mineIdx, 1); demolished = true; }
+            }
+
+            // Chercher une charbonnerie
+            if (!demolished) {
+                const charboIdx = charbonneries.findIndex(c => c.x === gridPos.x && c.y === gridPos.y);
+                if (charboIdx !== -1) { charbonneries.splice(charboIdx, 1); demolished = true; }
+            }
+
+            // Chercher une forge
+            if (!demolished) {
+                const forgeIdx = forges.findIndex(f => f.x === gridPos.x && f.y === gridPos.y);
+                if (forgeIdx !== -1) { forges.splice(forgeIdx, 1); demolished = true; }
+            }
+
+            // Chercher un grenier
+            if (!demolished) {
+                const grenierIdx = greniers.findIndex(g => g.x === gridPos.x && g.y === gridPos.y);
+                if (grenierIdx !== -1) { greniers.splice(grenierIdx, 1); demolished = true; }
+            }
+
+            // Chercher un séchoir
+            if (!demolished) {
+                const sechoirIdx = sechoirs.findIndex(s => s.x === gridPos.x && s.y === gridPos.y);
+                if (sechoirIdx !== -1) { sechoirs.splice(sechoirIdx, 1); demolished = true; }
+            }
+
+            // Chercher une ferme
+            if (!demolished) {
+                const fermeIdx = fermes.findIndex(f => f.x === gridPos.x && f.y === gridPos.y);
+                if (fermeIdx !== -1) { fermes.splice(fermeIdx, 1); demolished = true; }
+            }
+
+            // Chercher un marché
+            if (!demolished) {
+                const marcheIdx = marches.findIndex(m => m.x === gridPos.x && m.y === gridPos.y);
+                if (marcheIdx !== -1) { marches.splice(marcheIdx, 1); demolished = true; }
+            }
+
             spawnPopup(demolished ? '💥 Démoli !' : '❓ Rien ici', gridPos.x, gridPos.y);
 
         } else if (buildTowerMode) {
@@ -4268,6 +5728,218 @@ canvas.addEventListener('click', (e) => {
             }
             buildTowerMode = false;
             updateTowerButton();
+
+        } else if (buildSawyerMode) {
+            // Mode scierie : construire une scierie
+            const sizeSaw = CONFIG.buildingSizes.sawyer;
+            if (!isBuildingAreaFree(gridPos.x, gridPos.y, sizeSaw.width, sizeSaw.height)) {
+                spawnPopup('⚠️ Emplacement invalide !', gridPos.x, gridPos.y);
+                return;
+            } else if (player.wood >= CONFIG.sawyerCostWood && player.stone >= CONFIG.sawyerCostStone) {
+                sawyers.push({
+                    x: gridPos.x, y: gridPos.y,
+                    woodStored: 0, planksReady: 0,
+                    sawProgress: 0, isWorking: false,
+                    depositCooldown: 0
+                });
+                player.wood  -= CONFIG.sawyerCostWood;
+                player.stone -= CONFIG.sawyerCostStone;
+                SOUNDS.build();
+                spawnPopup('🪚 Scierie construite !', gridPos.x, gridPos.y);
+                updateWoodDisplay();
+                updateStoneDisplay();
+            } else {
+                spawnPopup(`${CONFIG.sawyerCostWood}🪵 + ${CONFIG.sawyerCostStone}🪨 requis`, gridPos.x, gridPos.y);
+            }
+            buildSawyerMode = false;
+            updateSawyerButton();
+
+        } else if (buildMineMode) {
+            // Mode mine : construire une mine
+            const sizeMn = CONFIG.buildingSizes.mine;
+            if (!isBuildingAreaFree(gridPos.x, gridPos.y, sizeMn.width, sizeMn.height)) {
+                spawnPopup('⚠️ Emplacement invalide !', gridPos.x, gridPos.y);
+                return;
+            } else if (player.wood >= CONFIG.mineCostWood && player.stone >= CONFIG.mineCostStone) {
+                mines.push({
+                    x: gridPos.x, y: gridPos.y,
+                    miningProgress: 0,
+                    ironReady: 0, copperReady: 0, goldReady: 0,
+                    isWorking: true
+                });
+                player.wood  -= CONFIG.mineCostWood;
+                player.stone -= CONFIG.mineCostStone;
+                SOUNDS.build();
+                spawnPopup('⛏️ Mine construite !', gridPos.x, gridPos.y);
+                updateWoodDisplay();
+                updateStoneDisplay();
+            } else {
+                spawnPopup(`${CONFIG.mineCostWood}🪵 + ${CONFIG.mineCostStone}🪨 requis`, gridPos.x, gridPos.y);
+            }
+            buildMineMode = false;
+            updateMineButton();
+
+        } else if (buildCharboMode) {
+            // Mode charbonnerie : construire une charbonnerie
+            const sizeCh = CONFIG.buildingSizes.charbo;
+            if (!isBuildingAreaFree(gridPos.x, gridPos.y, sizeCh.width, sizeCh.height)) {
+                spawnPopup('⚠️ Emplacement invalide !', gridPos.x, gridPos.y);
+                return;
+            } else if (player.wood >= CONFIG.charboCostWood && player.stone >= CONFIG.charboCostStone) {
+                charbonneries.push({
+                    x: gridPos.x, y: gridPos.y,
+                    woodStored: 0, charboReady: 0,
+                    charboProgress: 0, isWorking: false,
+                    depositCooldown: 0
+                });
+                player.wood  -= CONFIG.charboCostWood;
+                player.stone -= CONFIG.charboCostStone;
+                SOUNDS.build();
+                spawnPopup('🔥 Charbonnerie construite !', gridPos.x, gridPos.y);
+                updateWoodDisplay();
+                updateStoneDisplay();
+            } else {
+                spawnPopup(`${CONFIG.charboCostWood}🪵 + ${CONFIG.charboCostStone}🪨 requis`, gridPos.x, gridPos.y);
+            }
+            buildCharboMode = false;
+            updateCharboButton();
+
+        } else if (buildForgeMode) {
+            // Mode forge : construire une forge
+            const sizeFg = CONFIG.buildingSizes.forge;
+            if (!isBuildingAreaFree(gridPos.x, gridPos.y, sizeFg.width, sizeFg.height)) {
+                spawnPopup('⚠️ Emplacement invalide !', gridPos.x, gridPos.y);
+                return;
+            } else if (player.wood >= CONFIG.forgeCostWood && player.stone >= CONFIG.forgeCostStone) {
+                forges.push({
+                    x: gridPos.x, y: gridPos.y,
+                    ironStored: 0, charboStored: 0, lingotsReady: 0,
+                    forgeProgress: 0, isWorking: false,
+                    depositCooldown: 0
+                });
+                player.wood  -= CONFIG.forgeCostWood;
+                player.stone -= CONFIG.forgeCostStone;
+                SOUNDS.build();
+                spawnPopup('⚒️ Forge construite !', gridPos.x, gridPos.y);
+                updateWoodDisplay();
+                updateStoneDisplay();
+            } else {
+                spawnPopup(`${CONFIG.forgeCostWood}🪵 + ${CONFIG.forgeCostStone}🪨 requis`, gridPos.x, gridPos.y);
+            }
+            buildForgeMode = false;
+            updateForgeButton();
+
+        } else if (buildGrenierMode) {
+            // Mode grenier : construire un grenier
+            const sizeGr = CONFIG.buildingSizes.grenier;
+            if (!isBuildingAreaFree(gridPos.x, gridPos.y, sizeGr.width, sizeGr.height)) {
+                spawnPopup('⚠️ Emplacement invalide !', gridPos.x, gridPos.y);
+                return;
+            } else if (player.wood >= CONFIG.grenierCostWood && player.stone >= CONFIG.grenierCostStone) {
+                greniers.push({
+                    x: gridPos.x, y: gridPos.y,
+                    wheatStored: 0, flourStored: 0,
+                    depositCooldown: 0
+                });
+                player.wood  -= CONFIG.grenierCostWood;
+                player.stone -= CONFIG.grenierCostStone;
+                SOUNDS.build();
+                spawnPopup('🌾 Grenier construit !', gridPos.x, gridPos.y);
+                updateWoodDisplay();
+                updateStoneDisplay();
+            } else {
+                spawnPopup(`${CONFIG.grenierCostWood}🪵 + ${CONFIG.grenierCostStone}🪨 requis`, gridPos.x, gridPos.y);
+            }
+            buildGrenierMode = false;
+            updateGrenierButton();
+
+        } else if (buildSechoirMode) {
+            // Mode séchoir : construire un séchoir
+            const sizeSe = CONFIG.buildingSizes.sechoir;
+            if (!isBuildingAreaFree(gridPos.x, gridPos.y, sizeSe.width, sizeSe.height)) {
+                spawnPopup('⚠️ Emplacement invalide !', gridPos.x, gridPos.y);
+                return;
+            } else if (player.wood >= CONFIG.sechoirCostWood && player.stone >= CONFIG.sechoirCostStone) {
+                sechoirs.push({
+                    x: gridPos.x, y: gridPos.y,
+                    fishStored: 0, driedReady: 0,
+                    dryProgress: 0, isWorking: false,
+                    depositCooldown: 0
+                });
+                player.wood  -= CONFIG.sechoirCostWood;
+                player.stone -= CONFIG.sechoirCostStone;
+                SOUNDS.build();
+                spawnPopup('💨 Séchoir construit !', gridPos.x, gridPos.y);
+                updateWoodDisplay();
+                updateStoneDisplay();
+            } else {
+                spawnPopup(`${CONFIG.sechoirCostWood}🪵 + ${CONFIG.sechoirCostStone}🪨 requis`, gridPos.x, gridPos.y);
+            }
+            buildSechoirMode = false;
+            updateSechoirButton();
+
+        } else if (buildFermeMode) {
+            // Mode ferme : construire une ferme
+            const sizeFm = CONFIG.buildingSizes.ferme;
+            if (!isBuildingAreaFree(gridPos.x, gridPos.y, sizeFm.width, sizeFm.height)) {
+                spawnPopup('⚠️ Emplacement invalide !', gridPos.x, gridPos.y);
+                return;
+            } else if (player.wood >= CONFIG.fermeCostWood && player.stone >= CONFIG.fermeCostStone) {
+                const nouvelleFerme = {
+                    x: gridPos.x, y: gridPos.y,
+                    laineStored: 0, viandeStored: 0,
+                    prodTimer: 0
+                };
+                fermes.push(nouvelleFerme);
+                // Spawner 2 moutons autour de la ferme
+                for (let si = 0; si < 2; si++) {
+                    const sx = gridPos.x + (si === 0 ? 1 : -1);
+                    const sy = gridPos.y + (si === 0 ? 0 : 1);
+                    sheep.push({
+                        x: sx, y: sy,
+                        targetX: sx, targetY: sy,
+                        ferme: nouvelleFerme,
+                        walkCycle: Math.random() * Math.PI * 2,
+                        isMoving: false,
+                        waitTimer: 30 + si * 20,
+                        hasWool: false
+                    });
+                }
+                player.wood  -= CONFIG.fermeCostWood;
+                player.stone -= CONFIG.fermeCostStone;
+                SOUNDS.build();
+                spawnPopup('🐑 Ferme construite !', gridPos.x, gridPos.y);
+                updateWoodDisplay();
+                updateStoneDisplay();
+            } else {
+                spawnPopup(`${CONFIG.fermeCostWood}🪵 + ${CONFIG.fermeCostStone}🪨 requis`, gridPos.x, gridPos.y);
+            }
+            buildFermeMode = false;
+            updateFermeButton();
+
+        } else if (buildMarcheMode) {
+            // Mode marché : construire un marché
+            const sizeMa = CONFIG.buildingSizes.marche;
+            if (!isBuildingAreaFree(gridPos.x, gridPos.y, sizeMa.width, sizeMa.height)) {
+                spawnPopup('⚠️ Emplacement invalide !', gridPos.x, gridPos.y);
+                return;
+            } else if (player.wood >= CONFIG.marcheCostWood && player.stone >= CONFIG.marcheCostStone) {
+                marches.push({
+                    x: gridPos.x, y: gridPos.y,
+                    stock: [],
+                    tradeTimer: 0
+                });
+                player.wood  -= CONFIG.marcheCostWood;
+                player.stone -= CONFIG.marcheCostStone;
+                SOUNDS.build();
+                spawnPopup('🏪 Marché construit !', gridPos.x, gridPos.y);
+                updateWoodDisplay();
+                updateStoneDisplay();
+            } else {
+                spawnPopup(`${CONFIG.marcheCostWood}🪵 + ${CONFIG.marcheCostStone}🪨 requis`, gridPos.x, gridPos.y);
+            }
+            buildMarcheMode = false;
+            updateMarcheButton();
 
         } else if (buildPalisadeMode) {
             // Mode palissade : poser un segment
@@ -4631,6 +6303,14 @@ function deactivateAllModes(except) {
     if (except !== 'field')    { buildFieldMode    = false; updateFieldButton();    }
     if (except !== 'palisade') { buildPalisadeMode = false; updatePalisadeButton(); }
     if (except !== 'tower')    { buildTowerMode    = false; updateTowerButton();    }
+    if (except !== 'sawyer')   { buildSawyerMode   = false; updateSawyerButton();  }
+    if (except !== 'mine')     { buildMineMode     = false; updateMineButton();     }
+    if (except !== 'charbo')   { buildCharboMode   = false; updateCharboButton();   }
+    if (except !== 'forge')    { buildForgeMode    = false; updateForgeButton();    }
+    if (except !== 'grenier')  { buildGrenierMode  = false; updateGrenierButton();  }
+    if (except !== 'sechoir')  { buildSechoirMode  = false; updateSechoirButton();  }
+    if (except !== 'ferme')    { buildFermeMode    = false; updateFermeButton();    }
+    if (except !== 'marche')   { buildMarcheMode   = false; updateMarcheButton();   }
     if (except !== 'bridge')   { buildBridgeMode   = false; updateBridgeButton();   }
     if (except !== 'mill')      { buildMillMode      = false; updateMillButton();      }
     if (except !== 'bakery')   { buildBakeryMode   = false; updateBakeryButton();   }
@@ -4822,6 +6502,38 @@ buildCards.forEach(card => {
                 buildTowerMode = true;
                 updateTowerButton();
                 break;
+            case 'sawyer':
+                buildSawyerMode = true;
+                updateSawyerButton();
+                break;
+            case 'mine':
+                buildMineMode = true;
+                updateMineButton();
+                break;
+            case 'charbo':
+                buildCharboMode = true;
+                updateCharboButton();
+                break;
+            case 'forge':
+                buildForgeMode = true;
+                updateForgeButton();
+                break;
+            case 'grenier':
+                buildGrenierMode = true;
+                updateGrenierButton();
+                break;
+            case 'sechoir':
+                buildSechoirMode = true;
+                updateSechoirButton();
+                break;
+            case 'ferme':
+                buildFermeMode = true;
+                updateFermeButton();
+                break;
+            case 'marche':
+                buildMarcheMode = true;
+                updateMarcheButton();
+                break;
         }
     });
 });
@@ -4848,6 +6560,23 @@ updateHabitantDisplay();
 updateSeasonDisplay();
 updateDemolishButton();
 updateTowerButton();
+updateSawyerButton();
+updatePlanksDisplay();
+updateMineButton();
+updateIronDisplay();
+updateCopperDisplay();
+updateGoldDisplay();
+updateCharbonDisplay();
+updateLingotsDisplay();
+updateCharboButton();
+updateForgeButton();
+updateGrenierButton();
+updateDriedFishDisplay();
+updateLaineDisplay();
+updateViandeDisplay();
+updateSechoirButton();
+updateFermeButton();
+updateMarcheButton();
 
 // ========================================
 // DÉMARRAGE PWA : écran de chargement
@@ -4948,24 +6677,32 @@ function executeNewGame() {
     player.targetY = player.y;
     player.wood = 0;  player.stone = 0;  player.wheat = 0;
     player.flour = 0; player.fish = 0;   player.cookedFish = 0;
-    player.bread = 0; player.hunger = 100; player.cold = 100;
+    player.bread = 0; player.planks = 0; player.iron = 0; player.copper = 0; player.gold = 0;
+    player.charbon = 0; player.lingots = 0;
+    player.driedFish = 0; player.laine = 0; player.viande = 0;
+    player.hunger = 100; player.cold = 100;
     player.fishingTimer = 0;  player.fishingCooldown = 0;
     player.cuttingTarget = null; player.isMoving = false;
 
     // --- Vider toutes les structures ---
     [shelters, fields, palisades, mills, bakeries, poissonneries,
-     campfires, bridges, towers, habitants, wolves, popups].forEach(arr => arr.length = 0);
+     campfires, bridges, towers, sawyers, mines, charbonneries, forges, greniers,
+     sechoirs, fermes, marches, sheep, habitants, wolves, popups].forEach(arr => arr.length = 0);
 
     // --- Désactiver tous les modes de construction ---
     buildMode = false; buildFieldMode = false; buildPalisadeMode = false;
     buildMillMode = false; buildBakeryMode = false; buildPoissonnierieMode = false;
     buildCampfireMode = false; buildBridgeMode = false; buildTowerMode = false;
+    buildSawyerMode = false; buildMineMode = false;
+    buildCharboMode = false; buildForgeMode = false; buildGrenierMode = false;
+    buildSechoirMode = false; buildFermeMode = false; buildMarcheMode = false;
     demolishMode = false;
 
     // --- Timers et état global ---
     gameOver = false;
     wolfSpawnTimer = CONFIG.wolfSpawnInterval;
     frameCount = 0;
+    bridgeOrientation = 1;
     currentSeasonIndex = 0;
     seasonTimer = 0;
     seasonTransitionAlpha = 0;
@@ -5022,6 +6759,23 @@ function executeNewGame() {
     updateSeasonDisplay();
     updateHabitantDisplay();
     updateDemolishButton();
+    updateSawyerButton();
+    updatePlanksDisplay();
+    updateMineButton();
+    updateIronDisplay();
+    updateCopperDisplay();
+    updateGoldDisplay();
+    updateCharbonDisplay();
+    updateLingotsDisplay();
+    updateCharboButton();
+    updateForgeButton();
+    updateGrenierButton();
+    updateDriedFishDisplay();
+    updateLaineDisplay();
+    updateViandeDisplay();
+    updateSechoirButton();
+    updateFermeButton();
+    updateMarcheButton();
 
     showTemporaryMessage('🎮 Nouvelle partie commencée ! Bonne chance !');
     console.log('✅ Nouvelle partie initialisée !');

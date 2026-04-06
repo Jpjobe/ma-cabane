@@ -66,6 +66,36 @@ const FILES_TO_CACHE = [
     // Ponts
     './assets/Pont.png',
     './assets/Pont_2.png',
+    // Charbonnerie
+    './assets/charbonnerie_printemps.png',
+    './assets/charbonnerie_ete.png',
+    './assets/charbonnerie_automne.png',
+    './assets/charbonnerie_hiver.png',
+    // Forge
+    './assets/forge_printemps.png',
+    './assets/forge_ete.png',
+    './assets/forge_automne.png',
+    './assets/forge_hiver.png',
+    // Grenier
+    './assets/grenier_printemps.png',
+    './assets/grenier_ete.png',
+    './assets/grenier_automne.png',
+    './assets/grenier_hiver.png',
+    // Séchoir
+    './assets/sechoir_printemps.png',
+    './assets/sechoir_ete.png',
+    './assets/sechoir_automne.png',
+    './assets/sechoir_hiver.png',
+    // Ferme
+    './assets/ferme_printemps.png',
+    './assets/ferme_ete.png',
+    './assets/ferme_automne.png',
+    './assets/ferme_hiver.png',
+    // Marché
+    './assets/marche_printemps.png',
+    './assets/marche_ete.png',
+    './assets/marche_automne.png',
+    './assets/marche_hiver.png',
     // Animaux et structures uniques
     './assets/loup.png',
     './assets/tour.png'
