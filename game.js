@@ -5080,7 +5080,25 @@ function updateHTMLBars() {
 // BOUCLE DE JEU
 // ========================================
 
-function gameLoop() {
+// Détecte si on est sur mobile/tablette
+function isMobile() {
+    return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+
+// FPS adaptatif : 30 FPS sur mobile/tablette, 60 FPS sur PC
+let lastFrameTime = 0;
+const targetFPS = isMobile() ? 30 : 60;
+const frameInterval = 1000 / targetFPS;
+
+function gameLoop(now = performance.now()) {
+    // Limiter le FPS : sauter les frames trop rapprochées
+    const delta = now - lastFrameTime;
+    if (delta < frameInterval) {
+        requestAnimationFrame(gameLoop);
+        return;
+    }
+    lastFrameTime = now - (delta % frameInterval);
+
     // Auto-réparation : si le canvas est encore 0×0 (layout pas prêt),
     // on réessaie au prochain frame sans rien dessiner.
     if (canvas.width === 0 || canvas.height === 0) {
