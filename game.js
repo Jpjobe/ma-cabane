@@ -844,6 +844,21 @@ const habitants = [];
 // Couleurs distinctes pour reconnaître chaque habitant
 const HABITANT_COLORS = ['#e05a20', '#2090e0', '#a040c0', '#d0b010', '#20b060', '#e04070'];
 
+// Habitant sélectionné dans le popup d'assignation
+let selectedHabitant = null;
+
+// Labels affichés dans le popup d'assignation
+const BUILDING_TYPE_LABELS = {
+    moulin:        '⚙️ Moulin',
+    boulangerie:   '🍞 Boulangerie',
+    poissonnerie:  '🐟 Poissonnerie',
+    scierie:       '🪚 Scierie',
+    charbonnerie:  '🔥 Charbonnerie',
+    forge:         '⚒️ Forge',
+    mine:          '⛏️ Mine',
+    rocher:        '🪨 Rocher (pierre auto)',
+};
+
 // Les arbres (décoration)
 const trees = [];
 for (let i = 0; i < 15; i++) {
@@ -4542,7 +4557,9 @@ function spawnHabitant(shelter) {
         // Décaler le timer de nourriture pour éviter que tous mangent en même temps
         foodTimer: Math.floor(Math.random() * CONFIG.habitantFoodInterval),
         color,
-        gatherCooldown: 0
+        gatherCooldown: 0,
+        assignedBuilding: null,      // Bâtiment assigné (null = libre, vagabond)
+        assignedBuildingType: null,  // Type du bâtiment assigné ('moulin', 'rocher', etc.)
     });
     spawnPopup('👤 Un habitant arrive !', sx, sy);
     updateHabitantDisplay();
@@ -4579,24 +4596,70 @@ function updateHabitants() {
             h.walkCycle *= 0.85;
             h.waitTimer--;
             if (h.waitTimer <= 0) {
-                // Choisir une nouvelle destination dans le rayon de vagabondage
-                const r = CONFIG.habitantWanderRadius;
-                const nx = Math.round(h.shelter.x + (Math.random() * 2 - 1) * r);
-                const ny = Math.round(h.shelter.y + (Math.random() * 2 - 1) * r);
-                // Limiter aux bords du monde
-                const clampedNx = Math.max(0, Math.min(CONFIG.worldWidth - 1, nx));
-                const clampedNy = Math.max(0, Math.min(CONFIG.worldHeight - 1, ny));
-                const hasBridge = bridges.some(b => b.x === clampedNx && b.y === clampedNy);
-                if (!riverTileSet.has(`${clampedNx},${clampedNy}`) || hasBridge) {
-                    h.targetX = clampedNx;
-                    h.targetY = clampedNy;
+                if (h.assignedBuilding !== null) {
+                    // Assigné : se positionner autour du bâtiment
+                    const bx = h.assignedBuilding.x;
+                    const by = h.assignedBuilding.y;
+                    const distToBuilding = Math.sqrt((h.x - bx) ** 2 + (h.y - by) ** 2);
+                    if (distToBuilding > 1.5) {
+                        // Se rapprocher du bâtiment
+                        h.targetX = bx + (Math.random() > 0.5 ? 1 : -1);
+                        h.targetY = by;
+                    } else {
+                        // Légère oscillation autour du bâtiment
+                        h.targetX = bx + (Math.random() * 2 - 1);
+                        h.targetY = by + (Math.random() * 2 - 1) * 0.8;
+                    }
+                } else {
+                    // Libre : vagabondage normal autour de l'abri
+                    const r = CONFIG.habitantWanderRadius;
+                    const nx = Math.round(h.shelter.x + (Math.random() * 2 - 1) * r);
+                    const ny = Math.round(h.shelter.y + (Math.random() * 2 - 1) * r);
+                    // Limiter aux bords du monde
+                    const clampedNx = Math.max(0, Math.min(CONFIG.worldWidth - 1, nx));
+                    const clampedNy = Math.max(0, Math.min(CONFIG.worldHeight - 1, ny));
+                    const hasBridge = bridges.some(b => b.x === clampedNx && b.y === clampedNy);
+                    if (!riverTileSet.has(`${clampedNx},${clampedNy}`) || hasBridge) {
+                        h.targetX = clampedNx;
+                        h.targetY = clampedNy;
+                    }
                 }
                 h.waitTimer = 120 + Math.floor(Math.random() * 200);
             }
         }
 
-        // --- Collecte passive de ressources ---
-        if (h.gatherCooldown > 0) {
+        // --- Vérification et production du bâtiment assigné ---
+        if (h.assignedBuilding !== null) {
+            // Vérifier que le bâtiment existe encore
+            const bType = h.assignedBuildingType;
+            let buildingExists = false;
+            if      (bType === 'moulin')        buildingExists = mills.includes(h.assignedBuilding);
+            else if (bType === 'boulangerie')   buildingExists = bakeries.includes(h.assignedBuilding);
+            else if (bType === 'poissonnerie')  buildingExists = poissonneries.includes(h.assignedBuilding);
+            else if (bType === 'scierie')       buildingExists = sawyers.includes(h.assignedBuilding);
+            else if (bType === 'charbonnerie')  buildingExists = charbonneries.includes(h.assignedBuilding);
+            else if (bType === 'forge')         buildingExists = forges.includes(h.assignedBuilding);
+            else if (bType === 'mine')          buildingExists = mines.includes(h.assignedBuilding);
+            else if (bType === 'rocher')        buildingExists = stonePiles.includes(h.assignedBuilding);
+
+            if (!buildingExists) {
+                // Bâtiment démoli → libérer l'habitant
+                h.assignedBuilding = null;
+                h.assignedBuildingType = null;
+                spawnPopup('🔓 Libéré !', h.x, h.y);
+            } else if (bType === 'rocher' && h.assignedBuilding.collectCooldown <= 0) {
+                // Collecte automatique de pierre pour le rocher
+                player.stone += CONFIG.stonePerVisit;
+                h.assignedBuilding.collectCooldown = CONFIG.stoneCollectCooldown;
+                updateStoneDisplay();
+                spawnPopup(`+${CONFIG.stonePerVisit}🪨`, h.x, h.y);
+            }
+        }
+
+        // --- Collecte passive de ressources (habitants libres seulement) ---
+        if (h.assignedBuilding !== null) {
+            // Les habitants assignés ne ramassent pas bois/blé en passant
+        } else if (h.gatherCooldown > 0) {
             h.gatherCooldown--;
         } else {
             // Pile de bois proche ?
@@ -4676,6 +4739,12 @@ function drawHabitant(h) {
             ctx.drawImage(sprite, x - wSprite / 2, baseY - hSprite + bob, wSprite, hSprite);
         }
         ctx.restore();
+        // Icône ⚒️ au-dessus si l'habitant est assigné à un bâtiment
+        if (h.assignedBuilding !== null) {
+            ctx.font = `${Math.max(10, CONFIG.tileSize * 0.38)}px serif`;
+            ctx.textAlign = 'center';
+            ctx.fillText('⚒️', x, baseY - hSprite - 3 + bob);
+        }
         return;
     }
 
@@ -4684,12 +4753,85 @@ function drawHabitant(h) {
     ctx.fillRect(x - 6, baseY - 26 + bob, 12, 14);
     ctx.fillStyle = '#f5c8a0';
     ctx.beginPath(); ctx.arc(x, baseY - 31 + bob, 7, 0, Math.PI * 2); ctx.fill();
+    // Icône ⚒️ au-dessus (fallback)
+    if (h.assignedBuilding !== null) {
+        ctx.font = `${Math.max(10, CONFIG.tileSize * 0.38)}px serif`;
+        ctx.textAlign = 'center';
+        ctx.fillText('⚒️', x, baseY - 38 + bob);
+    }
 }
 
 // Met à jour l'affichage du nombre d'habitants
 function updateHabitantDisplay() {
     const el = document.getElementById('habitants');
     if (el) el.textContent = habitants.length;
+}
+
+// Affiche le popup d'assignation pour l'habitant cliqué
+function showHabitantPopup(h) {
+    selectedHabitant = h;
+    const popup     = document.getElementById('habitantPopup');
+    const title     = document.getElementById('habitantPopupTitle');
+    const status    = document.getElementById('habitantPopupStatus');
+    const list      = document.getElementById('habitantBuildingList');
+    const libererBtn = document.getElementById('habitantLibererBtn');
+
+    title.textContent = h.gender === 'homme' ? '👨 Habitant (homme)' : '👩 Habitante (femme)';
+
+    if (h.assignedBuilding !== null) {
+        status.textContent = `Assigné·e : ${BUILDING_TYPE_LABELS[h.assignedBuildingType]}`;
+        libererBtn.style.display = 'block';
+    } else {
+        status.textContent = 'Libre — choisir un bâtiment :';
+        libererBtn.style.display = 'none';
+    }
+
+    // Construire la liste des bâtiments compatibles
+    list.innerHTML = '';
+    const buildingGroups = [
+        { arr: mills,         type: 'moulin',       label: '⚙️ Moulin' },
+        { arr: bakeries,      type: 'boulangerie',  label: '🍞 Boulangerie' },
+        { arr: poissonneries, type: 'poissonnerie', label: '🐟 Poissonnerie' },
+        { arr: sawyers,       type: 'scierie',      label: '🪚 Scierie' },
+        { arr: charbonneries, type: 'charbonnerie', label: '🔥 Charbonnerie' },
+        { arr: forges,        type: 'forge',        label: '⚒️ Forge' },
+        { arr: mines,         type: 'mine',         label: '⛏️ Mine' },
+        { arr: stonePiles,    type: 'rocher',       label: '🪨 Rocher (pierre auto)' },
+    ];
+
+    let hasBuildings = false;
+    for (const group of buildingGroups) {
+        for (let i = 0; i < group.arr.length; i++) {
+            hasBuildings = true;
+            const b = group.arr[i];
+            const btn = document.createElement('button');
+            const isCurrentAssignment = (h.assignedBuilding === b);
+            btn.className = 'habitant-assign-btn' + (isCurrentAssignment ? ' active' : '');
+            btn.textContent = `${group.label} (${Math.round(b.x)},${Math.round(b.y)})`;
+            btn.addEventListener('click', () => {
+                h.assignedBuilding = b;
+                h.assignedBuildingType = group.type;
+                spawnPopup('⚒️ Assigné !', h.x, h.y);
+                closeHabitantPopup();
+            });
+            list.appendChild(btn);
+        }
+    }
+
+    if (!hasBuildings) {
+        const msg = document.createElement('p');
+        msg.style.cssText = 'color:#888; font-style:italic; margin:10px 0;';
+        msg.textContent = 'Aucun bâtiment compatible construit.';
+        list.appendChild(msg);
+    }
+
+    popup.classList.remove('hidden');
+}
+
+// Ferme le popup d'assignation d'habitant
+function closeHabitantPopup() {
+    document.getElementById('habitantPopup').classList.add('hidden');
+    selectedHabitant = null;
 }
 
 // Diminue la faim chaque frame et déclenche le game over à 0
@@ -6023,6 +6165,22 @@ canvas.addEventListener('click', (e) => {
             buildMode = false;
             updateBuildButton();
         } else {
+            // Mode normal : vérifier si on clique sur un habitant
+            const clickedHabitant = habitants.find(h => {
+                const pos = gridToIso(h.x, h.y);
+                const worldX = pos.x + canvas.width / 2;
+                const worldY = pos.y + 100 + CONFIG.tileSize / 4;
+                // Convertir en coordonnées écran (zoom + caméra)
+                const screenHX = worldX * currentZoom + canvas.width / 2 * (1 - currentZoom) + camera.x;
+                const screenHY = worldY * currentZoom + camera.y;
+                const dist = Math.sqrt((clickX - screenHX) ** 2 + (clickY - screenHY) ** 2);
+                return dist < CONFIG.tileSize * currentZoom * 0.75;
+            });
+            if (clickedHabitant) {
+                showHabitantPopup(clickedHabitant);
+                return;
+            }
+
             // Mode normal : vérifier si on clique sur un abri existant pour l'améliorer
             const clickedShelter = shelters.find(s => s.x === gridPos.x && s.y === gridPos.y);
             if (clickedShelter) {
@@ -6835,6 +6993,18 @@ document.getElementById('confirmYes')?.addEventListener('click', executeNewGame)
 document.getElementById('confirmNo')?.addEventListener('click', () => {
     document.getElementById('confirmPopup')?.classList.add('hidden');
 });
+
+// Popup assignation habitant
+document.getElementById('habitantPopupOverlay')?.addEventListener('click', closeHabitantPopup);
+document.getElementById('habitantLibererBtn')?.addEventListener('click', () => {
+    if (selectedHabitant) {
+        selectedHabitant.assignedBuilding = null;
+        selectedHabitant.assignedBuildingType = null;
+        spawnPopup('🔓 Libéré !', selectedHabitant.x, selectedHabitant.y);
+    }
+    closeHabitantPopup();
+});
+document.getElementById('habitantPopupClose')?.addEventListener('click', closeHabitantPopup);
 
 console.log('🎮 Jeu chargé avec succès !');
 console.log('👆 Clique sur la carte pour déplacer ton personnage');

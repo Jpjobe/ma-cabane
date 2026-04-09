@@ -237,6 +237,20 @@
         </div>
     </div>
 
+    <!-- Popup d'assignation d'habitant -->
+    <div id="habitantPopup" class="confirm-popup hidden">
+        <div class="popup-overlay" id="habitantPopupOverlay"></div>
+        <div class="confirm-content habitant-popup-content">
+            <h2 id="habitantPopupTitle">👤 Habitant</h2>
+            <p id="habitantPopupStatus"></p>
+            <div id="habitantBuildingList" class="habitant-building-list"></div>
+            <div class="confirm-buttons">
+                <button id="habitantLibererBtn" class="confirm-btn yes" style="display:none">🔓 Libérer</button>
+                <button id="habitantPopupClose" class="confirm-btn no">✖ Fermer</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Bouton flottant pour recentrer la caméra sur le personnage -->
     <button id="recenterBtn" class="recenter-btn" title="Centrer sur le personnage">🎯</button>
 
