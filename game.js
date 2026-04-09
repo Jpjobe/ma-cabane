@@ -63,7 +63,10 @@ const CONFIG = {
     wolfAttackInterval: 150,     // Frames entre deux attaques (même loup)
     towerCostWood: 8,            // Bois pour construire une tour de guet
     towerCostStone: 5,           // Pierre pour construire une tour de guet
-    towerWolfRepelRadius: 3,     // Rayon (en tuiles) où les loups fuient la tour
+    towerUpgradeLingots: 3,      // Lingots pour améliorer la tour au niv.2
+    towerUpgradeStone: 5,        // Pierre pour améliorer la tour au niv.2
+    towerWolfRepelRadius: 3,     // Rayon (en tuiles) où les loups fuient la tour niv.1
+    towerWolfRepelRadiusLevel2: 5, // Rayon élargi pour la tour niv.2
     coldDecayRate: 0.003,              // Points de froid perdus par frame (base)
     coldWinterMultiplier: 3,           // x3 en hiver (~1.8 min pour vider)
     coldSpringAutumnMultiplier: 0.25,  // x0.25 au printemps/automne (~22 min pour vider)
@@ -78,8 +81,8 @@ const CONFIG = {
     sawyerPlanksPerBatch: 5,   // Planches produites par fournée
     sawyerMaxWood: 9,          // Capacité max de bois stocké dans la scierie
     // ---- Mine ----
-    mineCostWood: 20,          // Bois pour construire une mine
-    mineCostStone: 15,         // Pierre pour construire une mine
+    mineCostPlanks: 10,        // Planches pour construire une mine (ressource avancée)
+    mineCostStone: 8,          // Pierre pour construire une mine
     miningDuration: 3600,      // Frames par cycle d'extraction (~60s à 60fps)
     mineIronPerBatch: 2,       // Lingots de fer produits par cycle
     mineCopperPerBatch: 1,     // Lingots de cuivre produits par cycle
@@ -93,8 +96,8 @@ const CONFIG = {
     charboPerBatch: 3,         // Charbon produit par fournée
     charboMaxWood: 15,         // Capacité max de bois stocké dans la charbonnerie
     // ---- Forge ----
-    forgeCostWood: 12,         // Bois pour construire une forge
-    forgeCostStone: 8,         // Pierre pour construire une forge
+    forgeCostPlanks: 6,        // Planches pour construire une forge (ressource avancée)
+    forgeCostStone: 5,         // Pierre pour construire une forge
     forgeDuration: 2400,       // Frames par fournée (~40s à 60fps)
     forgeIronPerBatch: 2,      // Fer consommé par fournée
     forgeCharboPerBatch: 2,    // Charbon consommé par fournée
@@ -122,8 +125,8 @@ const CONFIG = {
     fermeMaxViande: 5,         // Capacité max de viande stockée
     hungerFromMeat: 15,        // Faim restaurée par de la viande
     // ---- Marché ----
-    marcheCostWood: 12,        // Bois pour construire un marché
-    marcheCostStone: 6,        // Pierre pour construire un marché
+    marcheCostPlanks: 5,       // Planches pour construire un marché (ressource avancée)
+    marcheCostLingots: 3,      // Lingots pour construire un marché (ressource avancée)
     marcheDuration: 7200,      // Frames entre chaque livraison (~2min à 60fps)
     marcheMaxStock: 3,         // Nombre max de livraisons en attente
     buildingSizes: {
@@ -1708,13 +1711,12 @@ function drawTower(tower) {
     const y = pos.y + 100 + CONFIG.tileSize / 4;
 
     // Cercle de rayon semi-transparent pour visualiser la zone de protection
-    // On le dessine seulement si le joueur est en mode tour (feedback visuel)
-    if (buildTowerMode) {
-        const r = CONFIG.towerWolfRepelRadius;
-        // Convertir le rayon en pixels (approximatif isométrique)
-        const pxRadius = r * CONFIG.tileSize * 0.45;
-        ctx.strokeStyle = 'rgba(100,180,255,0.35)';
-        ctx.lineWidth = 1.5;
+    const towerLevel = tower.level || 1;
+    const towerRadius = towerLevel >= 2 ? CONFIG.towerWolfRepelRadiusLevel2 : CONFIG.towerWolfRepelRadius;
+    if (buildTowerMode || towerLevel >= 2) {
+        const pxRadius = towerRadius * CONFIG.tileSize * 0.45;
+        ctx.strokeStyle = towerLevel >= 2 ? 'rgba(255,200,50,0.45)' : 'rgba(100,180,255,0.35)';
+        ctx.lineWidth = towerLevel >= 2 ? 2 : 1.5;
         ctx.setLineDash([6, 4]);
         ctx.beginPath();
         ctx.ellipse(x, y - CONFIG.tileSize * 0.1, pxRadius, pxRadius * 0.5, 0, 0, Math.PI * 2);
@@ -1738,9 +1740,9 @@ function drawTower(tower) {
         ctx.fillRect(x + 4,  y - 52, 6, 8);
     }
 
-    // Petite icône de bouclier au-dessus pour signaler la protection
+    // Icône au-dessus : ⭐ si niv.2 pour distinguer visuellement
     ctx.font = '12px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('🗼', x, y - 50);
+    ctx.fillText(towerLevel >= 2 ? '🗼⭐' : '🗼', x, y - 50);
 }
 
 // Dessine un pont sur une tuile de rivière (sprite PNG selon orientation)
@@ -2969,7 +2971,8 @@ function updateWolves() {
             const tdx = wolf.x - t.x;
             const tdy = wolf.y - t.y;
             const td  = Math.sqrt(tdx * tdx + tdy * tdy);
-            if (td < CONFIG.towerWolfRepelRadius && td < closestTowerDist) {
+            const tRadius = (t.level || 1) >= 2 ? CONFIG.towerWolfRepelRadiusLevel2 : CONFIG.towerWolfRepelRadius;
+            if (td < tRadius && td < closestTowerDist) {
                 nearTower = true;
                 closestTowerDx = tdx;
                 closestTowerDy = tdy;
@@ -3701,8 +3704,8 @@ function updateMineButton() {
         btn.textContent = '🎯 Clique sur la carte pour placer la mine';
     } else {
         btn.classList.remove('active');
-        btn.textContent = `⛏️ Mine (${CONFIG.mineCostWood}🪵 + ${CONFIG.mineCostStone}🪨)`;
-        btn.disabled = player.wood < CONFIG.mineCostWood || player.stone < CONFIG.mineCostStone;
+        btn.textContent = `⛏️ Mine (${CONFIG.mineCostPlanks}🪵→ + ${CONFIG.mineCostStone}🪨)`;
+        btn.disabled = player.planks < CONFIG.mineCostPlanks || player.stone < CONFIG.mineCostStone;
     }
 }
 
@@ -3970,8 +3973,8 @@ function updateForgeButton() {
         btn.textContent = '🎯 Clique sur la carte pour placer la forge';
     } else {
         btn.classList.remove('active');
-        btn.textContent = `⚒️ Forge (${CONFIG.forgeCostWood}🪵 + ${CONFIG.forgeCostStone}🪨)`;
-        btn.disabled = player.wood < CONFIG.forgeCostWood || player.stone < CONFIG.forgeCostStone;
+        btn.textContent = `⚒️ Forge (${CONFIG.forgeCostPlanks}🪵→ + ${CONFIG.forgeCostStone}🪨)`;
+        btn.disabled = player.planks < CONFIG.forgeCostPlanks || player.stone < CONFIG.forgeCostStone;
     }
 }
 
@@ -4523,8 +4526,8 @@ function updateMarcheButton() {
         btn.textContent = '🎯 Clique sur la carte pour placer le marché';
     } else {
         btn.classList.remove('active');
-        btn.textContent = `🏪 Marché (${CONFIG.marcheCostWood}🪵 + ${CONFIG.marcheCostStone}🪨)`;
-        btn.disabled = player.wood < CONFIG.marcheCostWood || player.stone < CONFIG.marcheCostStone;
+        btn.textContent = `🏪 Marché (${CONFIG.marcheCostPlanks}🪵→ + ${CONFIG.marcheCostLingots}⚒️)`;
+        btn.disabled = player.planks < CONFIG.marcheCostPlanks || player.lingots < CONFIG.marcheCostLingots;
     }
 }
 
@@ -5920,21 +5923,21 @@ canvas.addEventListener('click', (e) => {
             if (!isBuildingAreaFree(gridPos.x, gridPos.y, sizeMn.width, sizeMn.height)) {
                 spawnPopup('⚠️ Emplacement invalide !', gridPos.x, gridPos.y);
                 return;
-            } else if (player.wood >= CONFIG.mineCostWood && player.stone >= CONFIG.mineCostStone) {
+            } else if (player.planks >= CONFIG.mineCostPlanks && player.stone >= CONFIG.mineCostStone) {
                 mines.push({
                     x: gridPos.x, y: gridPos.y,
                     miningProgress: 0,
                     ironReady: 0, copperReady: 0, goldReady: 0,
                     isWorking: true
                 });
-                player.wood  -= CONFIG.mineCostWood;
-                player.stone -= CONFIG.mineCostStone;
+                player.planks -= CONFIG.mineCostPlanks;
+                player.stone  -= CONFIG.mineCostStone;
                 SOUNDS.build();
                 spawnPopup('⛏️ Mine construite !', gridPos.x, gridPos.y);
-                updateWoodDisplay();
+                updatePlanksDisplay();
                 updateStoneDisplay();
             } else {
-                spawnPopup(`${CONFIG.mineCostWood}🪵 + ${CONFIG.mineCostStone}🪨 requis`, gridPos.x, gridPos.y);
+                spawnPopup(`${CONFIG.mineCostPlanks}🪵→ + ${CONFIG.mineCostStone}🪨 requis`, gridPos.x, gridPos.y);
             }
             buildMineMode = false;
             updateMineButton();
@@ -5970,21 +5973,21 @@ canvas.addEventListener('click', (e) => {
             if (!isBuildingAreaFree(gridPos.x, gridPos.y, sizeFg.width, sizeFg.height)) {
                 spawnPopup('⚠️ Emplacement invalide !', gridPos.x, gridPos.y);
                 return;
-            } else if (player.wood >= CONFIG.forgeCostWood && player.stone >= CONFIG.forgeCostStone) {
+            } else if (player.planks >= CONFIG.forgeCostPlanks && player.stone >= CONFIG.forgeCostStone) {
                 forges.push({
                     x: gridPos.x, y: gridPos.y,
                     ironStored: 0, charboStored: 0, lingotsReady: 0,
                     forgeProgress: 0, isWorking: false,
                     depositCooldown: 0
                 });
-                player.wood  -= CONFIG.forgeCostWood;
-                player.stone -= CONFIG.forgeCostStone;
+                player.planks -= CONFIG.forgeCostPlanks;
+                player.stone  -= CONFIG.forgeCostStone;
                 SOUNDS.build();
                 spawnPopup('⚒️ Forge construite !', gridPos.x, gridPos.y);
-                updateWoodDisplay();
+                updatePlanksDisplay();
                 updateStoneDisplay();
             } else {
-                spawnPopup(`${CONFIG.forgeCostWood}🪵 + ${CONFIG.forgeCostStone}🪨 requis`, gridPos.x, gridPos.y);
+                spawnPopup(`${CONFIG.forgeCostPlanks}🪵→ + ${CONFIG.forgeCostStone}🪨 requis`, gridPos.x, gridPos.y);
             }
             buildForgeMode = false;
             updateForgeButton();
@@ -6083,20 +6086,20 @@ canvas.addEventListener('click', (e) => {
             if (!isBuildingAreaFree(gridPos.x, gridPos.y, sizeMa.width, sizeMa.height)) {
                 spawnPopup('⚠️ Emplacement invalide !', gridPos.x, gridPos.y);
                 return;
-            } else if (player.wood >= CONFIG.marcheCostWood && player.stone >= CONFIG.marcheCostStone) {
+            } else if (player.planks >= CONFIG.marcheCostPlanks && player.lingots >= CONFIG.marcheCostLingots) {
                 marches.push({
                     x: gridPos.x, y: gridPos.y,
                     stock: [],
                     tradeTimer: 0
                 });
-                player.wood  -= CONFIG.marcheCostWood;
-                player.stone -= CONFIG.marcheCostStone;
+                player.planks  -= CONFIG.marcheCostPlanks;
+                player.lingots -= CONFIG.marcheCostLingots;
                 SOUNDS.build();
                 spawnPopup('🏪 Marché construit !', gridPos.x, gridPos.y);
-                updateWoodDisplay();
-                updateStoneDisplay();
+                updatePlanksDisplay();
+                updateLingotsDisplay();
             } else {
-                spawnPopup(`${CONFIG.marcheCostWood}🪵 + ${CONFIG.marcheCostStone}🪨 requis`, gridPos.x, gridPos.y);
+                spawnPopup(`${CONFIG.marcheCostPlanks}🪵→ + ${CONFIG.marcheCostLingots}⚒️ requis`, gridPos.x, gridPos.y);
             }
             buildMarcheMode = false;
             updateMarcheButton();
@@ -6178,6 +6181,25 @@ canvas.addEventListener('click', (e) => {
             });
             if (clickedHabitant) {
                 showHabitantPopup(clickedHabitant);
+                return;
+            }
+
+            // Mode normal : vérifier si on clique sur une tour existante pour l'améliorer (niv.2)
+            const clickedTower = towers.find(t => t.x === gridPos.x && t.y === gridPos.y);
+            if (clickedTower) {
+                if ((clickedTower.level || 1) >= 2) {
+                    spawnPopup('🗼 Tour déjà au max !', gridPos.x, gridPos.y);
+                } else if (player.lingots >= CONFIG.towerUpgradeLingots && player.stone >= CONFIG.towerUpgradeStone) {
+                    clickedTower.level = 2;
+                    player.lingots -= CONFIG.towerUpgradeLingots;
+                    player.stone   -= CONFIG.towerUpgradeStone;
+                    SOUNDS.build();
+                    spawnPopup('🗼⭐ Tour renforcée ! (rayon 5)', gridPos.x, gridPos.y);
+                    updateLingotsDisplay();
+                    updateStoneDisplay();
+                } else {
+                    spawnPopup(`${CONFIG.towerUpgradeLingots}⚒️ + ${CONFIG.towerUpgradeStone}🪨 requis`, gridPos.x, gridPos.y);
+                }
                 return;
             }
 
