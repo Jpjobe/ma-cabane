@@ -375,6 +375,7 @@ let camera = {
 let worldBounds = { minX: 0, maxX: 0, minY: 0, maxY: 0 };
 
 // État du pan (glissement pour déplacer la caméra)
+let isPaused     = false;  // Pause du jeu
 let isPanning    = false;
 let lastPanX     = 0;
 let lastPanY     = 0;
@@ -5236,6 +5237,12 @@ const targetFPS = isMobile() ? 30 : 60;
 const frameInterval = 1000 / targetFPS;
 
 function gameLoop(now = performance.now()) {
+    // Si en pause : continuer la boucle mais ne rien calculer/dessiner
+    if (isPaused) {
+        requestAnimationFrame(gameLoop);
+        return;
+    }
+
     // Limiter le FPS : sauter les frames trop rapprochées
     const delta = now - lastFrameTime;
     if (delta < frameInterval) {
@@ -7027,6 +7034,44 @@ document.getElementById('habitantLibererBtn')?.addEventListener('click', () => {
     closeHabitantPopup();
 });
 document.getElementById('habitantPopupClose')?.addEventListener('click', closeHabitantPopup);
+
+// ── PAUSE ─────────────────────────────────────────────────────────────────
+
+/** Bascule la pause du jeu et met à jour le bouton + l'overlay visuel */
+function togglePause() {
+    isPaused = !isPaused;
+    const btn = document.getElementById('pauseBtn');
+
+    if (isPaused) {
+        btn.textContent = '▶️ Reprendre';
+        btn.style.background = '#27ae60';
+
+        // Afficher un overlay "PAUSE" sur le canvas
+        ctx.save();
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 60px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('⏸️ PAUSE', canvas.width / 2, canvas.height / 2);
+        ctx.font = '24px Arial';
+        ctx.fillText('Appuie sur Reprendre pour continuer', canvas.width / 2, canvas.height / 2 + 50);
+        ctx.restore();
+    } else {
+        btn.textContent = '⏸️ Pause';
+        btn.style.background = '#f0a500';
+    }
+}
+
+// Raccourci clavier : Espace ou P pour pause/reprise
+document.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' || e.key === 'p' || e.key === 'P') {
+        // Éviter de bloquer la saisie dans un champ texte
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        e.preventDefault();
+        togglePause();
+    }
+});
 
 console.log('🎮 Jeu chargé avec succès !');
 console.log('👆 Clique sur la carte pour déplacer ton personnage');
